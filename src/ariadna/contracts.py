@@ -239,7 +239,7 @@ class Recommendation(BaseModel):
 #   честное «не найдено» + вход для карты пробелов.
 class Answer(BaseModel):
     question: str = Field(description="Исходный вопрос")
-    text: str = Field(description="Текст ответа (синтез Claude) или «в корпусе не найдено»")
+    text: str = Field(description="Текст ответа (синтез answer-LLM, см. ANSWER_MODEL) или «в корпусе не найдено»")
     citations: list[Citation] = Field(default_factory=list, description="Цитаты-источники ответа")
     contradictions: list[Contradiction] = Field(default_factory=list, description="У-3: найденные противоречия")
     recommendations: list[Recommendation] = Field(default_factory=list, description="У-1: похожие кейсы, эксперты, смежные темы")

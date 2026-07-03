@@ -12,8 +12,8 @@
 Recommendation, RecommendationKind (`contracts.py`).
 
 **Зависимости:** Cypher-шаблоны из graph (gap-матрица NOT EXISTS, обходы);
-search/embeddings для векторной близости (похожие кейсы); Claude API для
-текстового синтеза секций литобзора.
+search/embeddings для векторной близости (похожие кейсы); локальная LLM
+(ANSWER_MODEL через Ollama, см. `.env`) для текстового синтеза секций литобзора.
 
 **Не входит в зону ответственности:** запись в Neo4j, ответы на прямые вопросы
 (search), отрисовка (ui).

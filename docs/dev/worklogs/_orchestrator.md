@@ -52,3 +52,12 @@ vector index жив, self-match ок. Тесты волны: 81+10+12 зелён
 **Открыто:** tech-debt (не блокирует): logutil LOG_DIR относительно cwd + тестовый мусор
 в logs/pipeline/; двойное SEARCH-003 на один сбойный чанк; self_check без ORDER BY.
 Готовность к M-01 — по команде PM.
+
+## 2026-07-03 · оркестратор · решение PM: синтез ответов — локальный Qwen вместо Claude API
+**Сделано:** пайплайн полностью локальный. `.env`/`.env.example`: ANSWER_BACKEND=ollama,
+ANSWER_MODEL=qwen3.5:35b-a3b, ключ Anthropic пуст (возврат: ANSWER_BACKEND=anthropic +
+ключ). Обновлены CLAUDE.md, ARCHITECTURE, README, паспорта search/analytics, STATUS
+(A-11), docstring пакета search, contracts.py (только текст description Answer.text).
+**Решения:** переключатель бэкенда вместо жёсткой замены — возврат на Claude одной
+строкой без правок кода. В паспорт search добавлено ограничение reasoning-бюджета.
+**Открыто:** A-11 реализует ветку ollama; ветка anthropic — заглушка до появления ключа.

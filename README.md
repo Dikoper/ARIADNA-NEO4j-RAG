@@ -101,4 +101,4 @@ DGX Spark (Blackwell/cuda 12.1+), затем `dc --profile vllm up -d vllm`.
 
 Neo4j (граф + vector index) · neo4j-graphrag · Qwen3.5-35B-A3B через Ollama (int4)
 (извлечение — локально, откат: Ollama/qwen3.5:9b) · Qwen3-Embedding-0.6B (эмбеддинги
-RU/EN, Ollama) · Claude API (синтез ответов) · FastAPI · Streamlit
+RU/EN, Ollama) · Qwen3.5 через Ollama (синтез ответов; Claude API — опция через ANSWER_BACKEND) · FastAPI · Streamlit

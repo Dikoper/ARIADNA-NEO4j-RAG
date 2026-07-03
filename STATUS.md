@@ -27,7 +27,7 @@ worklog для них — worklogs/_orchestrator.md.
 | M-02 | — | **ВЕХА: граф виден в Neo4j Browser** (~10 ч) | 📋 | PM+оркестратор | — |
 | M-03 | — | **ЧЕК-ПОЙНТ ДЕГРАДАЦИИ (10–12 ч): сквозной путь работает? нет → RAG-first** | 📋 | решение PM | — |
 | A-10 | search | Роутер запросов: QueryIntent, шаблонные Cypher под 4 эталонных запроса + сравнительный шаблон «RU vs зарубеж» (У-2) | 📋 | — | — |
-| A-11 | search | Гибридный ответ: retrieval граф+вектор → синтез Claude → Answer с цитатами + пометка contradicts (У-3) | 📋 | — | — |
+| A-11 | search | Гибридный ответ: retrieval граф+вектор → синтез локальным Qwen через Ollama (ANSWER_BACKEND, бюджет на thinking) → Answer с цитатами + пометка contradicts (У-3) | 📋 | — | — |
 | M-04 | — | **ВЕХА: 4 эталонных запроса отвечают** (~15 ч) | 📋 | PM+оркестратор | — |
 | A-12 | analytics | Карта пробелов ⭐: gap-матрица (Cypher NOT EXISTS) → GapReport + темы only_ru/only_foreign | 📋 | — | — |
 | A-13 | ui | Streamlit: чат + подграф ответа (contradicts красным, У-3) + карта пробелов + фильтры гео/год | 📋 | — | — |
