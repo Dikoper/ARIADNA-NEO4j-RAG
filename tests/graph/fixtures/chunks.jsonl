@@ -1,0 +1,4 @@
+{"chunk_id": "test_a05_doc1#0", "doc_id": "test_a05_doc1", "text": "Экстракция меди при температуре 60°C, содержание SO4^2- ≤ 300 мг/л, «эффективность» — 95% (диапазон 200–300 мг/дм³).", "start": 0, "end": 110, "lang": "ru", "embedding": [0.11, 0.22, 0.33, 0.44]}
+{"chunk_id": "test_a05_doc1#1", "doc_id": "test_a05_doc1", "text": "Второй чанк без эмбеддинга — для проверки GRAPH-002.", "start": 110, "end": 160, "lang": "ru", "embedding": null}
+{"chunk_id": "test_a05_doc2#0", "doc_id": "test_a05_doc2", "text": "English chunk with embedding, electrowinning at low pH.", "start": 0, "end": 55, "lang": "en", "embedding": [0.55, 0.66, 0.77, 0.88]}
+{"chunk_id": "test_a05_orphan#0", "doc_id": "test_a05_missing_doc", "text": "Orphan chunk — родительский документ test_a05_missing_doc отсутствует в meta.jsonl.", "start": 0, "end": 70, "lang": "ru", "embedding": null}

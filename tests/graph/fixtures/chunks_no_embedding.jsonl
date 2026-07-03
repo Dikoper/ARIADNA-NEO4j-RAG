@@ -1,0 +1,2 @@
+{"chunk_id": "test_a05_noemb#0", "doc_id": "test_a05_noemb_doc", "text": "Чанк без вектора номер один.", "start": 0, "end": 20, "lang": "ru", "embedding": null}
+{"chunk_id": "test_a05_noemb#1", "doc_id": "test_a05_noemb_doc", "text": "Чанк без вектора номер два.", "start": 20, "end": 40, "lang": "ru", "embedding": null}

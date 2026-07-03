@@ -1,0 +1,3 @@
+{"doc_id": "test_a05_limit_doc1", "path": "test/a05/limit1.txt", "title": "Limit Doc 1", "authors": [], "year": 2020, "lang": "ru", "geography": "ru", "source_folder": "Статьи", "is_core": true}
+{"doc_id": "test_a05_limit_doc2", "path": "test/a05/limit2.txt", "title": "Limit Doc 2", "authors": [], "year": 2021, "lang": "ru", "geography": "ru", "source_folder": "Статьи", "is_core": true}
+{"doc_id": "test_a05_limit_doc3", "path": "test/a05/limit3.txt", "title": "Limit Doc 3", "authors": [], "year": 2022, "lang": "ru", "geography": "ru", "source_folder": "Статьи", "is_core": true}

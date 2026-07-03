@@ -1,0 +1,2 @@
+{"doc_id": "test_a05_doc1", "path": "test/a05/doc1.txt", "title": "Тестовый документ №1 «Экстракция меди»", "authors": ["Иванов И.И.", "Petrov A."], "year": 2021, "lang": "ru", "geography": "ru", "source_folder": "Статьи", "is_core": true}
+{"doc_id": "test_a05_doc2", "path": "test/a05/doc2.txt", "title": "Test Document 2", "authors": [], "year": 2019, "lang": "en", "geography": "foreign", "source_folder": "Доклады", "is_core": false}

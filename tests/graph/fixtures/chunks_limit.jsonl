@@ -1,0 +1,3 @@
+{"chunk_id": "test_a05_limit#0", "doc_id": "test_a05_limit_doc1", "text": "Лимит-чанк 0.", "start": 0, "end": 15, "lang": "ru", "embedding": [0.1, 0.2]}
+{"chunk_id": "test_a05_limit#1", "doc_id": "test_a05_limit_doc2", "text": "Лимит-чанк 1.", "start": 15, "end": 30, "lang": "ru", "embedding": [0.3, 0.4]}
+{"chunk_id": "test_a05_limit#2", "doc_id": "test_a05_limit_doc3", "text": "Лимит-чанк 2.", "start": 30, "end": 45, "lang": "ru", "embedding": [0.5, 0.6]}

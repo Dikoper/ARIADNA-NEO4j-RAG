@@ -1,0 +1,3 @@
+{"chunk_id": "test_a05_dim#0", "doc_id": "test_a05_dim_doc", "text": "Первый чанк без вектора.", "start": 0, "end": 20, "lang": "ru", "embedding": null}
+{"chunk_id": "test_a05_dim#1", "doc_id": "test_a05_dim_doc", "text": "Второй чанк с вектором размерности 2.", "start": 20, "end": 50, "lang": "ru", "embedding": [1.0, 2.0]}
+{"chunk_id": "test_a05_dim#2", "doc_id": "test_a05_dim_doc", "text": "Третий чанк с другим вектором той же размерности.", "start": 50, "end": 80, "lang": "ru", "embedding": [3.0, 4.0]}
