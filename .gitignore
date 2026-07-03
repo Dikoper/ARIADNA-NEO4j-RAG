@@ -1,0 +1,65 @@
+# --- Ноу-хау и рабочие материалы анализа (не публикуем) ---
+artifacts/
+
+# --- Данные кейса (4.9 ГБ, скачиваются с Яндекс.Диска) ---
+data/
+*.zip
+*.rar
+
+# --- Секреты и окружение ---
+.env
+.env.*
+!.env.example
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Модели и кеши ML ---
+models/
+.ollama/
+.cache/
+*.gguf
+*.safetensors
+
+# --- Neo4j / Docker volumes ---
+deploy/volumes/
+neo4j_data/
+neo4j_logs/
+
+# --- Логи и временные файлы ---
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+*.bak
+*~
+
+# --- IDE и ОС ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# --- Claude Code (локальные настройки) ---
+.claude/settings.local.json
+
+# --- Артефакты выгрузки ---
+*.mhtml
+exports/
