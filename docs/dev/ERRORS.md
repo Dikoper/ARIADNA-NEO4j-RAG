@@ -20,4 +20,6 @@
 | SEARCH-001 | Роутер не подобрал шаблон запроса | Вопрос вне покрытия шаблонов | `search/router` — fallback на векторный RAG-ответ + лог вопроса |
 | SEARCH-002 | Слот шаблона Cypher не заполнен | LLM не извлекла параметр из вопроса | `search/router` — переспрос/дефолт; лог промпт-хеша и ответа |
 | SEARCH-003 | Ollama `/api/embed` вернула пустой/неполный/не-JSON ответ или недоступна | Сеть/контейнер недоступен, битый ответ, несовпадение размерности вектора | `search/embeddings` — ретрай батча (RETRY_ATTEMPTS), затем изоляция по одному чанку; сбойный чанк — в `embed_skipped.jsonl` |
+| SEARCH-004 | Векторный поиск в Neo4j не выполнился | Neo4j недоступен, индекс `chunk_embedding_idx` отсутствует/ещё не создан, битый вектор запроса | `search/rag_demo` — Answer(found=False, «в корпусе не найдено»); проверить `graph/lexical_loader` self_check (vector_index_exists) |
+| SEARCH-005 | Answer-LLM (ANSWER_MODEL через Ollama) недоступна или вернула пустой content | Сеть/контейнер недоступен, битый ответ, весь бюджет max_tokens ушёл на thinking (content пуст, есть только reasoning) | `search/rag_demo` — увеличить ANSWER_MAX_TOKENS; деградация — текст с найденными citations без синтеза |
 | DEPLOY-001 | Сервис (Neo4j/Ollama) недоступен | Контейнер не поднят / порт занят | `deploy/` — healthcheck в compose; README-инструкция |

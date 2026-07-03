@@ -19,7 +19,7 @@ worklog для них — worklogs/_orchestrator.md.
 | A-03 | ingest | Отбор целевых документов под 4 эталонных запроса (ключевые слова: обессоливание, католит, штейн/шлак МПГ, шахтные воды) + флаг is_core | ✅ | module-dev (Sonnet), волна 2 | worklogs/ingest.md |
 | A-04 | search | Эмбеддинги Qwen3-Embedding-0.6B для чанков (модуль embeddings, офлайн-батч) | ✅ | module-dev (Sonnet), волна 2 | worklogs/search.md |
 | A-05 | graph | Загрузка лексического графа Document→Chunk + vector index в Neo4j | ✅ | module-dev (Sonnet), волна 2 | worklogs/graph.md |
-| M-01 | — | **ВЕХА: страховочное демо — векторный RAG-ответ с цитатами** (~5 ч) | 📋 | PM+оркестратор | — |
+| M-01 | — | **ВЕХА: страховочное демо — векторный RAG-ответ с цитатами** (~5 ч) | ✅ | оркестратор → module-dev+tester (Sonnet) | worklogs/search.md |
 | A-06 | graph | OWL-онтология + словарь синонимов RU/EN в ontology/ | 📋 | — | — |
 | A-07 | extraction | Правила чисел/единиц: regex-нормализатор → NumericConstraint + тесты на примерах эталонных запросов | 📋 | — | — |
 | A-08 | extraction | LLM-извлечение по онтологии (Ollama/qwen3.5:35b-a3b — осн. рантайм, откат qwen3.5:9b; structured output по схеме ExtractionResult; учесть reasoning-режим — бюджет токенов) | 📋 | — | — |
