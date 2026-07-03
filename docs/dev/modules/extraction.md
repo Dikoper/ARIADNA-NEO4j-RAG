@@ -10,11 +10,15 @@
 RelationType (`contracts.py`). JSON-схема ExtractionResult вставляется в промпт LLM
 (structured output) и валидирует ответ.
 
-**Зависимости:** LLM через OpenAI-совместимый API vLLM (`VLLM_BASE_URL`, модель
-`EXTRACTION_MODEL` = NVFP4-сборка Qwen3.5-35B-A3B — решение PM 03.07.2026); запасной
-рантайм — Ollama (`EXTRACTION_MODEL_FALLBACK` = qwen3.5:9b). Клиент писать так, чтобы
-переключение рантайма было сменой base_url+модели в `.env`, не кода. Словарь синонимов
-из `ontology/` (когда появится, A-06).
+**Зависимости:** LLM через Ollama native API (`/api/chat`, `OLLAMA_BASE_URL`; модель
+`EXTRACTION_MODEL` = qwen3.5:35b-a3b — основной рантайм, ревизия PM 03.07.2026; откат
+`EXTRACTION_MODEL_FALLBACK` = qwen3.5:9b; vLLM запаркован). qwen3.5:35b-a3b —
+reasoning-модель: thinking отключать (`"think": false` в /api/chat), иначе бюджет
+токенов уходит в размышления (замер 03.07: no-think ~30 с/чанк, think ~67 с/чанк
+с обрезанным ответом). Системный HTTP_PROXY ломает HTTP к localhost — клиент строить
+без прокси (см. search/embeddings). Переключение рантайма/модели — сменой значений
+в `.env`, не кода. Словарь синонимов — `ontology/synonyms.yaml` +
+`graph.ontology.canonical_name()` (A-06); числа/единицы — `extraction.rules` (A-07).
 
 **Не входит в зону ответственности:** дедупликация сущностей между документами и
 загрузка в Neo4j (graph), чанкинг (ingest), ответы на вопросы (search).
