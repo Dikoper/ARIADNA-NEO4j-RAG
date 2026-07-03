@@ -16,13 +16,13 @@ worklog для них — worklogs/_orchestrator.md.
 | A-00 | docs | Bootstrap документации и контрактов | ✅ | оркестратор | worklogs/_orchestrator.md#2026-07-03 |
 | A-01 | deploy | docker-compose: Neo4j + Ollama (qwen3.5:35b-a3b, осн. рантайм; vLLM запаркован) + healthcheck, инструкция запуска | ✅ | module-dev+fixer (Sonnet), волна 1 | worklogs/deploy.md |
 | A-02 | ingest | Конвертация ядра корпуса (Обзоры+Статьи+Доклады) → DocumentText/Meta + чанкинг | ✅ | module-dev (Sonnet), волна 1 | worklogs/ingest.md |
-| A-03 | ingest | Отбор целевых документов под 4 эталонных запроса (ключевые слова: обессоливание, католит, штейн/шлак МПГ, шахтные воды) + флаг is_core | 📋 | — | — |
-| A-04 | search | Эмбеддинги Qwen3-Embedding-0.6B для чанков (модуль embeddings, офлайн-батч) | 📋 | — | — |
-| A-05 | graph | Загрузка лексического графа Document→Chunk + vector index в Neo4j | 📋 | — | — |
+| A-03 | ingest | Отбор целевых документов под 4 эталонных запроса (ключевые слова: обессоливание, католит, штейн/шлак МПГ, шахтные воды) + флаг is_core | 🧪 | module-dev (Sonnet), волна 2 | worklogs/ingest.md |
+| A-04 | search | Эмбеддинги Qwen3-Embedding-0.6B для чанков (модуль embeddings, офлайн-батч) | 🚧 | module-dev (Sonnet), волна 2 | worklogs/search.md |
+| A-05 | graph | Загрузка лексического графа Document→Chunk + vector index в Neo4j | 🧪 | module-dev (Sonnet), волна 2 | worklogs/graph.md |
 | M-01 | — | **ВЕХА: страховочное демо — векторный RAG-ответ с цитатами** (~5 ч) | 📋 | PM+оркестратор | — |
 | A-06 | graph | OWL-онтология + словарь синонимов RU/EN в ontology/ | 📋 | — | — |
 | A-07 | extraction | Правила чисел/единиц: regex-нормализатор → NumericConstraint + тесты на примерах эталонных запросов | 📋 | — | — |
-| A-08 | extraction | LLM-извлечение по онтологии (Qwen3.5-35B-A3B через vLLM+NVFP4, откат Ollama/qwen3.5:9b; structured output по схеме ExtractionResult) | 📋 | — | — |
+| A-08 | extraction | LLM-извлечение по онтологии (Ollama/qwen3.5:35b-a3b — осн. рантайм, откат qwen3.5:9b; structured output по схеме ExtractionResult; учесть reasoning-режим — бюджет токенов) | 📋 | — | — |
 | A-09 | graph | Загрузка сущностного графа: дедуп по синонимам, хабы Experiment/TechSolution, provenance + поля У-4 (source/updated_at/confidence/edited_by) | 📋 | — | — |
 | M-02 | — | **ВЕХА: граф виден в Neo4j Browser** (~10 ч) | 📋 | PM+оркестратор | — |
 | M-03 | — | **ЧЕК-ПОЙНТ ДЕГРАДАЦИИ (10–12 ч): сквозной путь работает? нет → RAG-first** | 📋 | решение PM | — |
