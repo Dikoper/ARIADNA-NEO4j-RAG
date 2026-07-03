@@ -98,7 +98,7 @@ class Chunk(BaseModel):
     start: int = Field(default=0, description="Смещение начала чанка в тексте документа")
     end: int = Field(default=0, description="Смещение конца чанка в тексте документа")
     lang: Lang = Field(default=Lang.RU, description="Язык чанка")
-    embedding: list[float] | None = Field(default=None, description="Вектор bge-m3 (заполняет search/embeddings)")
+    embedding: list[float] | None = Field(default=None, description="Вектор Qwen3-Embedding-0.6B (заполняет search/embeddings)")
 
 
 # ══════════════════════════ Extraction ══════════════════════════
@@ -145,7 +145,7 @@ class ExtractionResult(BaseModel):
     entities: list[Entity] = Field(default_factory=list, description="Извлечённые сущности")
     relations: list[Relation] = Field(default_factory=list, description="Извлечённые связи")
     constraints: list[NumericConstraint] = Field(default_factory=list, description="Числа/единицы, найденные правилами (не LLM)")
-    model: str = Field(default="", description="Модель извлечения: qwen3:8b и т.п.")
+    model: str = Field(default="", description="Модель извлечения: Qwen3.5-35B-A3B-NVFP4 и т.п.")
     prompt_hash: str = Field(default="", description="Хеш промпта — для воспроизведения ошибок")
 
 

@@ -50,5 +50,6 @@ docker compose -f deploy/docker-compose.yml up -d   # Neo4j + Ollama
 
 ## Стек
 
-Neo4j (граф + vector index) · neo4j-graphrag · Ollama (Qwen3, извлечение — локально) ·
-Claude API (Text2Cypher, синтез ответов) · bge-m3 (эмбеддинги RU/EN) · FastAPI · Streamlit
+Neo4j (граф + vector index) · neo4j-graphrag · Qwen3.5-35B-A3B через vLLM+NVFP4
+(извлечение — локально, откат: Ollama/qwen3.5:9b) · Qwen3-Embedding-0.6B (эмбеддинги
+RU/EN, Ollama) · Claude API (синтез ответов) · FastAPI · Streamlit

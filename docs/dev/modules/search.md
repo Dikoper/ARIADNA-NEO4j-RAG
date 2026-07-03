@@ -11,11 +11,12 @@
 **Контракты:** QueryIntent, QueryFilters, Citation, Answer, Contradiction
 (`contracts.py`).
 
-**Подмодули:** `embeddings` (bge-m3, используется и офлайн для индексации A-04,
-и онлайн для запросов), `router` (вопрос → QueryIntent), `retrieval` (выполнение
-шаблона + векторный поиск), `answer` (промпт Claude + сборка Answer).
+**Подмодули:** `embeddings` (Qwen3-Embedding-0.6B через Ollama — решение PM
+03.07.2026; используется и офлайн для индексации A-04, и онлайн для запросов),
+`router` (вопрос → QueryIntent), `retrieval` (выполнение шаблона + векторный поиск),
+`answer` (промпт Claude + сборка Answer).
 
-**Зависимости:** Neo4j (только чтение!), Ollama/sentence-transformers для bge-m3,
+**Зависимости:** Neo4j (только чтение!), Ollama (EMBEDDING_MODEL=qwen3-embedding:0.6b),
 Anthropic API (ANSWER_MODEL из `.env`), Cypher-шаблоны из graph.
 
 **Не входит в зону ответственности:** запись в Neo4j (graph), карта пробелов и

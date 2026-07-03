@@ -10,8 +10,11 @@
 RelationType (`contracts.py`). JSON-схема ExtractionResult вставляется в промпт LLM
 (structured output) и валидирует ответ.
 
-**Зависимости:** Ollama API (модель из `.env`: EXTRACTION_MODEL, qwen3:8b/14b),
-словарь синонимов из `ontology/` (когда появится, A-06).
+**Зависимости:** LLM через OpenAI-совместимый API vLLM (`VLLM_BASE_URL`, модель
+`EXTRACTION_MODEL` = NVFP4-сборка Qwen3.5-35B-A3B — решение PM 03.07.2026); запасной
+рантайм — Ollama (`EXTRACTION_MODEL_FALLBACK` = qwen3.5:9b). Клиент писать так, чтобы
+переключение рантайма было сменой base_url+модели в `.env`, не кода. Словарь синонимов
+из `ontology/` (когда появится, A-06).
 
 **Не входит в зону ответственности:** дедупликация сущностей между документами и
 загрузка в Neo4j (graph), чанкинг (ingest), ответы на вопросы (search).
