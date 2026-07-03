@@ -1,0 +1,3 @@
+{"chunk_id": "test_a04_doc1#0", "doc_id": "test_a04_doc1", "text": "Экстракция меди при температуре 60°C, содержание SO4 не более 300 мг/л.", "start": 0, "end": 71, "lang": "ru", "embedding": null}
+{"chunk_id": "test_a04_doc1#1", "doc_id": "test_a04_doc1", "text": "Второй чанк того же документа — про электроэкстракцию цинка.", "start": 71, "end": 132, "lang": "ru", "embedding": null}
+{"chunk_id": "test_a04_doc2#0", "doc_id": "test_a04_doc2", "text": "English chunk about electrowinning at low pH and high current density.", "start": 0, "end": 71, "lang": "en", "embedding": null}
