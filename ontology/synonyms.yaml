@@ -1,0 +1,333 @@
+# synonyms.yaml — словарь синонимов RU/EN доменных терминов «Ариадны» (A-06).
+#
+# Назначение: канонизация имён сущностей при извлечении (extraction, A-08 — подсказки
+# в промпт LLM) и дедупликация узлов графа по синонимам (graph, A-09) — «электроэкстракция»
+# и «electrowinning» не должны стать двумя разными узлами Material/Process.
+#
+# Структура записи:
+#   canonical  — каноническое имя термина (RU), это же имя пишется в GraphNode.name
+#   type       — один из 8 EntityType (contracts.py 🔒): Material/Process/Equipment/
+#                Property/Experiment/Publication/Expert/Facility
+#   synonyms   — синонимы/переводы/аббревиатуры (RU и EN вперемешку, без пометки языка —
+#                canonical_name() ищет без учёта регистра и языка)
+#
+# Покрытие: обязательные термины 4 эталонных запросов жюри (docs/dev/TASK.md) +
+# базовые материалы/процессы отрасли, реально встречающиеся в корпусе. Качество важнее
+# количества — только термины с реальной синонимией/переводом, не полный глоссарий.
+#
+# Валидация: src/ariadna/graph/ontology.py:load_synonyms() проверяет каждый type
+# против contracts.EntityType — неизвестный type = ошибка GRAPH-003 (docs/dev/ERRORS.md).
+
+terms:
+  # ─── Запрос 1: обессоливание воды обогатительной фабрики ─────────────
+  - canonical: обессоливание
+    type: Process
+    synonyms:
+      - десалинация
+      - desalination
+      - обессоливание воды
+      - деминерализация воды
+      - demineralization
+
+  - canonical: минерализация
+    type: Property
+    synonyms:
+      - минерализация воды
+      - общая минерализация
+      - сухой остаток
+      - солесодержание
+      - total dissolved solids
+      - TDS
+      - dry residue
+
+  - canonical: обратный осмос
+    type: Process
+    synonyms:
+      - reverse osmosis
+      - RO
+      - гиперфильтрация
+
+  - canonical: электродиализ
+    type: Process
+    synonyms:
+      - electrodialysis
+      - ED
+
+  - canonical: нанофильтрация
+    type: Process
+    synonyms:
+      - nanofiltration
+      - NF
+
+  - canonical: сульфаты
+    type: Material
+    synonyms:
+      - sulfates
+      - sulphates
+      - SO4
+      - сульфат-ионы
+
+  - canonical: хлориды
+    type: Material
+    synonyms:
+      - chlorides
+      - Cl
+      - хлорид-ионы
+
+  - canonical: кальций
+    type: Material
+    synonyms:
+      - calcium
+      - Ca
+
+  - canonical: магний
+    type: Material
+    synonyms:
+      - magnesium
+      - Mg
+
+  - canonical: натрий
+    type: Material
+    synonyms:
+      - sodium
+      - Na
+
+  - canonical: обогатительная фабрика
+    type: Facility
+    synonyms:
+      - concentrator
+      - concentration plant
+      - processing plant
+      - ОФ
+
+  # ─── Запрос 2: циркуляция католита при электроэкстракции никеля ──────
+  - canonical: католит
+    type: Material
+    synonyms:
+      - catholyte
+      - католит электролита
+      - прикатодный электролит
+
+  - canonical: электроэкстракция
+    type: Process
+    synonyms:
+      - electrowinning
+      - EW
+      - электроэкстракция никеля
+      - электроосаждение
+
+  - canonical: электролиз
+    type: Process
+    synonyms:
+      - electrolysis
+
+  - canonical: скорость потока
+    type: Property
+    synonyms:
+      - flow rate
+      - расход потока
+      - скорость циркуляции
+      - flow velocity
+      - линейная скорость потока
+
+  - canonical: катод
+    type: Equipment
+    synonyms:
+      - cathode
+
+  - canonical: анод
+    type: Equipment
+    synonyms:
+      - anode
+
+  - canonical: электролизная ванна
+    type: Equipment
+    synonyms:
+      - electrolytic cell
+      - electrowinning cell
+      - ванна электролиза
+
+  - canonical: никель
+    type: Material
+    synonyms:
+      - nickel
+      - Ni
+
+  # ─── Запрос 3: Au, Ag, МПГ между штейном и шлаком ─────────────────────
+  - canonical: штейн
+    type: Material
+    synonyms:
+      - matte
+      - медный штейн
+      - никелевый штейн
+      - copper matte
+      - nickel matte
+
+  - canonical: шлак
+    type: Material
+    synonyms:
+      - slag
+      - металлургический шлак
+
+  - canonical: платиноиды
+    type: Material
+    synonyms:
+      - МПГ
+      - PGM
+      - platinum group metals
+      - металлы платиновой группы
+      - платиновые металлы
+
+  - canonical: золото
+    type: Material
+    synonyms:
+      - gold
+      - Au
+
+  - canonical: серебро
+    type: Material
+    synonyms:
+      - silver
+      - Ag
+
+  - canonical: медь
+    type: Material
+    synonyms:
+      - copper
+      - Cu
+
+  - canonical: конвертер
+    type: Equipment
+    synonyms:
+      - converter
+      - конвертерный передел
+
+  - canonical: печь взвешенной плавки
+    type: Equipment
+    synonyms:
+      - ПВП
+      - flash smelting furnace
+      - flash furnace
+
+  # ─── Запрос 4: закачка шахтных вод в глубокие горизонты ──────────────
+  - canonical: шахтные воды
+    type: Material
+    synonyms:
+      - mine water
+      - шахтная вода
+      - рудничные воды
+      - AMD
+      - acid mine drainage
+      - кислые рудничные воды
+      - подземные воды шахт
+
+  - canonical: закачка шахтных вод
+    type: Process
+    synonyms:
+      - mine water injection
+      - закачка вод в глубокие горизонты
+      - underground injection
+      - подземное захоронение сточных вод
+      - закачка сточных вод в скважины
+
+  # ─── Общеотраслевые материалы/процессы (встречаются в корпусе) ───────
+  - canonical: кобальт
+    type: Material
+    synonyms:
+      - cobalt
+      - Co
+
+  - canonical: медно-никелевая руда
+    type: Material
+    synonyms:
+      - copper-nickel ore
+      - сульфидная медно-никелевая руда
+
+  - canonical: флотация
+    type: Process
+    synonyms:
+      - flotation
+      - пенная флотация
+      - froth flotation
+
+  - canonical: автоклавное выщелачивание
+    type: Process
+    synonyms:
+      - autoclave leaching
+      - автоклавное окисление
+      - pressure oxidation
+      - POX
+
+  - canonical: выщелачивание
+    type: Process
+    synonyms:
+      - leaching
+      - выщелачивание руды
+
+  - canonical: кучное выщелачивание
+    type: Process
+    synonyms:
+      - heap leaching
+      - кучное выщелачивание руды
+
+  - canonical: обогащение
+    type: Process
+    synonyms:
+      - beneficiation
+      - обогащение руды
+
+  - canonical: гидрометаллургия
+    type: Process
+    synonyms:
+      - hydrometallurgy
+      - гидрометаллургический процесс
+
+  - canonical: пирометаллургия
+    type: Process
+    synonyms:
+      - pyrometallurgy
+      - пирометаллургический процесс
+
+  - canonical: аффинаж
+    type: Process
+    synonyms:
+      - refining
+      - аффинажное производство
+
+  - canonical: жидкостная экстракция
+    type: Process
+    synonyms:
+      - solvent extraction
+      - SX
+      - экстракция растворителем
+
+  - canonical: ионный обмен
+    type: Process
+    synonyms:
+      - ion exchange
+      - IX
+
+  - canonical: сорбция
+    type: Process
+    synonyms:
+      - sorption
+      - адсорбция
+
+  - canonical: концентрация
+    type: Property
+    synonyms:
+      - concentration
+      - содержание
+
+  - canonical: температура
+    type: Property
+    synonyms:
+      - temperature
+      - температурный режим
+
+  - canonical: металлургический комбинат
+    type: Facility
+    synonyms:
+      - smelter
+      - metallurgical plant
+      - плавильный завод

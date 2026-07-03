@@ -51,3 +51,37 @@ notification `IndexOrConstraintAlreadyExists`, ни имя, ни dim не вли
 на несовпадении размерности; в этой БД не воспроизвелось (LIMIT 1 стабильно берёт
 самый старый чанк — боевой, 177 Document уже были загружены раньше тестов), но
 порядок не гарантирован Cypher-семантикой — не блокирующая находка, не эскалирую.
+
+## 2026-07-03 · module-dev (Sonnet) · A-06
+**Сделано:** `ontology/ariadna.ttl` (8 классов = EntityType, 6 object properties =
+RelationType, rdfs:label RU/EN, domain/range по смыслу задания, TechSolution как
+`rdfs:subClassOf ariadna:Process`); `ontology/synonyms.yaml` (45 канонических
+терминов, покрыты все 4 эталонных запроса + базовые материалы/процессы отрасли);
+`src/ariadna/graph/ontology.py` (`load_synonyms`, `canonical_name`,
+`ttl_smoke_check`, валидация типа против `contracts.EntityType`).
+**Решения:** described_in/validated_by/contradicts — домен намеренно не сужен
+(rdfs:domain с несколькими классами в RDFS даёт пересечение, а не объединение —
+избежал ложного ограничения); TTL не парсится rdflib (запрет по задаче) — только
+текстовая смоук-проверка на маркеры `owl:Class`/`owl:ObjectProperty`/`@prefix`;
+неизвестный `type` в synonyms.yaml — `OntologyValidationError` с кодом GRAPH-003
+(зарегистрирован в ERRORS.md) до использования словаря потребителями.
+**Проблемы:** нет.
+**Открыто:** extraction (A-08) и graph/entity-loader (A-09) — потребители
+`load_synonyms()`/`canonical_name()`, интерфейс зафиксирован пре-комментариями.
+
+## 2026-07-03 20:20 · module-tester (Sonnet) · A-06
+**Сделано:** `tests/graph/test_ontology.py` (34 теста): боевой synonyms.yaml
+(≥40 записей, валидные type, без дублей канона, без коллизий обратного индекса),
+покрытие терминов жюри (electrowinning/catholyte/desalination/matte/slag/PGM/
+AMD/mine water + RU-формы), canonical_name (регистронезависимость, unknown→None,
+канон резолвится в себя), валидация (неизвестный type → OntologyValidationError
+GRAPH-003 через tmp-файл; битый YAML → yaml.YAMLError; пустой YAML; отсутствующий
+canonical → KeyError), TTL-смоук (боевой файл проходит, missing/empty → False,
+все 8 EntityType и 6 RelationType присутствуют текстово, TechSolution — реальный
+блок объявления subClassOf Process), кеш `_lookup_index` (monkeypatch-счётчик
+вызовов load_synonyms, раздельный кеш по пути). Прогон `tests/graph/` целиком:
+44/44 прошли (34 новых + 10 A-05 lexical_loader против живого Neo4j). Lint — ок.
+**Найденные баги:** нет багов кода `ontology.py`/`ariadna.ttl`/`synonyms.yaml` —
+контракт, валидация и граничные случаи ведут себя как в пре-комментариях/паспорте.
+**Проблемы:** нет.
+**Открыто:** нет.

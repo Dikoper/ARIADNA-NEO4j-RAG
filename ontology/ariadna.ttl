@@ -1,0 +1,101 @@
+# ariadna.ttl — OWL-онтология «Ариадны» (карта знаний R&D горно-металлургической отрасли).
+#
+# Источник истины: онтология задания (docs/dev/TASK.md) + `src/ariadna/contracts.py`
+# (🔒, EntityType/RelationType) — contracts.py первичен, этот TTL следует за ним и
+# НЕ добавляет новых классов/свойств сверх зафиксированных заданием 8 сущностей / 6 связей.
+# Изменение состава классов/свойств здесь без синхронного изменения contracts.py —
+# рассинхрон, запрещён (см. CLAUDE.md, «контракты меняет только solver»).
+#
+# Глубокий OWL-reasoning вне скоупа хакатона: файл — семантический фасад (rdfs:label
+# RU/EN + domain/range для документации и потребителей ontology.py), не парсится
+# rdflib в рантайме (см. docs/dev/modules/graph.md, задача A-06).
+#
+# Хаб «TechSolution»: НЕ отдельный EntityType (см. ARCHITECTURE.md) — оформлен ниже
+# как rdfs:subClassOf ariadna:Process, размечающий роль узла-хаба технического решения.
+
+@prefix ariadna: <https://ariadna.hackathon.local/ontology#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+
+# ══════════════════════════ Онтология ══════════════════════════
+
+ariadna: a owl:Ontology ;
+    rdfs:label "Ариадна: карта знаний R&D горно-металлургической отрасли"@ru,
+               "Ariadna: R&D knowledge map for mining and metallurgy"@en ;
+    rdfs:comment "Онтология фиксирована заданием хакатона; источник истины — src/ariadna/contracts.py (EntityType, RelationType); версионируется вместе с кодом, не rdflib-рантаймом."@ru .
+
+# ══════════════════════════ Классы = EntityType (8, contracts.py 🔒) ══════════════════════════
+
+ariadna:Material a owl:Class ;
+    rdfs:label "Материал"@ru, "Material"@en ;
+    rdfs:comment "Сырьё, реагент, промпродукт или химический компонент: никель, медь, штейн, шлак, католит, сульфаты и т.п."@ru .
+
+ariadna:Process a owl:Class ;
+    rdfs:label "Процесс"@ru, "Process"@en ;
+    rdfs:comment "Технология или операция передела: флотация, электроэкстракция, обессоливание, автоклавное выщелачивание. Второй граф-хаб (наряду с Experiment) — см. ariadna:TechSolution ниже."@ru .
+
+ariadna:Equipment a owl:Class ;
+    rdfs:label "Оборудование"@ru, "Equipment"@en ;
+    rdfs:comment "Аппарат/установка передела: печь взвешенной плавки, конвертер, электролизная ванна, катод/анод."@ru .
+
+ariadna:Property a owl:Class ;
+    rdfs:label "Свойство"@ru, "Property"@en ;
+    rdfs:comment "Измеримый параметр или условие: температура, концентрация, скорость потока, минерализация."@ru .
+
+ariadna:Experiment a owl:Class ;
+    rdfs:label "Эксперимент"@ru, "Experiment"@en ;
+    rdfs:comment "Экспериментальное исследование/испытание, связывающее материалы, процессы и условия с результатом. Первый граф-хаб онтологии (см. docs/dev/ARCHITECTURE.md)."@ru .
+
+ariadna:Publication a owl:Class ;
+    rdfs:label "Публикация"@ru, "Publication"@en ;
+    rdfs:comment "Источник факта: статья, обзор, доклад — провенанс до документа/чанка."@ru .
+
+ariadna:Expert a owl:Class ;
+    rdfs:label "Эксперт"@ru, "Expert"@en ;
+    rdfs:comment "Автор публикации/эксперимента — извлекается из авторства документов корпуса."@ru .
+
+ariadna:Facility a owl:Class ;
+    rdfs:label "Объект"@ru, "Facility"@en ;
+    rdfs:comment "Промышленный объект: обогатительная фабрика, металлургический комбинат, рудник."@ru .
+
+# ─── TechSolution: роль-подкласс Process, НЕ новый EntityType ────────────
+ariadna:TechSolution a owl:Class ;
+    rdfs:subClassOf ariadna:Process ;
+    rdfs:label "Техническое решение"@ru, "Technical solution"@en ;
+    rdfs:comment "Аннотация роли узла Process как графового хаба технических решений (3 из 4 эталонных запросов жюри). НЕ отдельный EntityType контракта — метка использования, а не самостоятельный класс онтологии задания."@ru .
+
+# ══════════════════════════ Object properties = RelationType (6, contracts.py 🔒) ══════════════════════════
+
+ariadna:uses_material a owl:ObjectProperty ;
+    rdfs:label "использует материал"@ru, "uses material"@en ;
+    rdfs:domain ariadna:Process ;
+    rdfs:range ariadna:Material ;
+    rdfs:comment "Процесс/техническое решение использует материал как сырьё или реагент. В извлечении применяется и к Experiment (Experiment — подкласс использования не вводится, домен указан по основному смыслу задания)."@ru .
+
+ariadna:operates_at_condition a owl:ObjectProperty ;
+    rdfs:label "работает в условиях"@ru, "operates at condition"@en ;
+    rdfs:domain ariadna:Process ;
+    rdfs:range ariadna:Property ;
+    rdfs:comment "Процесс/оборудование работает при заданном параметре/условии (температура, концентрация, скорость потока). Числовые ограничения связи — NumericConstraint (contracts.py), извлекаются только правилами."@ru .
+
+ariadna:produces_output a owl:ObjectProperty ;
+    rdfs:label "производит результат"@ru, "produces output"@en ;
+    rdfs:domain ariadna:Process ;
+    rdfs:range ariadna:Material ;
+    rdfs:comment "Процесс производит материал-результат (продукт, побочный продукт, отход): штейн, шлак, католит."@ru .
+
+ariadna:described_in a owl:ObjectProperty ;
+    rdfs:label "описан в"@ru, "described in"@en ;
+    rdfs:range ariadna:Publication ;
+    rdfs:comment "Любая сущность онтологии описана в публикации-источнике (домен намеренно не сужен — провенанс применим ко всем 8 типам сущностей)."@ru .
+
+ariadna:validated_by a owl:ObjectProperty ;
+    rdfs:label "подтверждён"@ru, "validated by"@en ;
+    rdfs:range ariadna:Experiment ;
+    rdfs:comment "Материал/процесс/техническое решение подтверждён экспериментом (домен намеренно не сужен — подтверждать экспериментом может любая сущность-кандидат на верификацию)."@ru .
+
+ariadna:contradicts a owl:ObjectProperty , owl:SymmetricProperty ;
+    rdfs:label "противоречит"@ru, "contradicts"@en ;
+    rdfs:comment "Симметричная связь: два факта/эксперимента/технических решения дают противоречащие результаты (подсветка в UI, У-3). Домен/диапазон не сужены — противоречие возможно между любыми сопоставимыми узлами онтологии."@ru .
