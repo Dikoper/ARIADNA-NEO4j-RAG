@@ -14,7 +14,7 @@ worklog для них — worklogs/_orchestrator.md.
 | ID | Модуль | Задача | Состояние | Агент | Worklog |
 |---|---|---|---|---|---|
 | A-00 | docs | Bootstrap документации и контрактов | ✅ | оркестратор | worklogs/_orchestrator.md#2026-07-03 |
-| A-01 | deploy | docker-compose: Neo4j + vLLM (NVFP4, Qwen3.5-35B-A3B) + Ollama (+ healthcheck), инструкция запуска | 🚧 | fixer (Sonnet), REJECT ревью 03.07 | worklogs/deploy.md |
+| A-01 | deploy | docker-compose: Neo4j + Ollama (qwen3.5:35b-a3b, осн. рантайм; vLLM запаркован) + healthcheck, инструкция запуска | ✅ | module-dev+fixer (Sonnet), волна 1 | worklogs/deploy.md |
 | A-02 | ingest | Конвертация ядра корпуса (Обзоры+Статьи+Доклады) → DocumentText/Meta + чанкинг | ✅ | module-dev (Sonnet), волна 1 | worklogs/ingest.md |
 | A-03 | ingest | Отбор целевых документов под 4 эталонных запроса (ключевые слова: обессоливание, католит, штейн/шлак МПГ, шахтные воды) + флаг is_core | 📋 | — | — |
 | A-04 | search | Эмбеддинги Qwen3-Embedding-0.6B для чанков (модуль embeddings, офлайн-батч) | 📋 | — | — |

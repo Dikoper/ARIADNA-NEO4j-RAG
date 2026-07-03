@@ -1,0 +1,139 @@
+# ─── deploy/docker-compose.yml ──────────────────────────────────
+# Назначение: инфраструктура одного запуска проекта «Ариадна» — Neo4j (граф +
+#   vector index) + Ollama (основной рантайм: извлечение qwen3.5:35b-a3b +
+#   эмбеддинги; решение PM 03.07.2026) + vLLM (запаркован, профиль `vllm`).
+#   См. docs/dev/modules/deploy.md.
+# Инварианты: веса моделей и данные графа — только в именованных volume (не в git,
+#   не в образе); все три сервиса имеют healthcheck (DEPLOY-001); пароли/эндпоинты —
+#   только из .env (см. .env.example), .env в git не попадает.
+# Железо: DGX Spark, ARM64 (GB10/Blackwell), ~120 ГБ unified memory — образы ниже
+#   проверены на multi-arch с linux/arm64. GPU хоста пробрасывается в vllm и ollama
+#   через deploy.resources (нужен nvidia-container-toolkit; проверено `docker run
+#   --gpus all` на этом хосте).
+# Уровень: ✅ реализовано (A-01, worklogs/deploy.md#2026-07-03)
+
+# Явное имя проекта — том/сети называются одинаково независимо от того, из какого
+# каталога запущен `docker compose` (иначе имя берётся из каталога compose-файла).
+name: ariadna
+
+services:
+  # ─── neo4j ──────────────────────────────────────────────────────
+  # Назначение: граф знаний (лексический + сущностный), vector index для чанков.
+  # Образ: neo4j:5.26-community — multi-arch (linux/amd64, linux/arm64), Neo4j 5.13+
+  #   имеет встроенный vector index (db.index.vector.*), APOC подключаем плагином.
+  # Уровень: ✅ реализовано (A-01)
+  neo4j:
+    image: neo4j:5.26-community
+    container_name: ariadna_neo4j
+    restart: unless-stopped
+    ports:
+      - "${NEO4J_HTTP_PORT:-7474}:7474"   # Neo4j Browser
+      - "${NEO4J_BOLT_PORT:-7687}:7687"   # Bolt-протокол (драйверы)
+    environment:
+      NEO4J_AUTH: "${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:?укажи NEO4J_PASSWORD в .env}"
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_server_memory_heap_initial__size: "1G"
+      NEO4J_server_memory_heap_max__size: "4G"
+      NEO4J_server_memory_pagecache_size: "2G"
+      # dbms.security.procedures.unrestricted — APOC-процедуры без ограничений
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+    healthcheck:
+      # cypher-shell входит в образ; проверяет и HTTP, и Bolt-готовность одним запросом.
+      test: ["CMD-SHELL", "cypher-shell -u ${NEO4J_USER:-neo4j} -p ${NEO4J_PASSWORD} 'RETURN 1;' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 18   # ~3 мин на холодный старт (первый запуск дольше — инициализация БД)
+      start_period: 30s
+
+  # ─── vllm ───────────────────────────────────────────────────────
+  # Назначение: ЗАПАРКОВАННЫЙ альтернативный рантайм извлечения — OpenAI-совместимый
+  #   эндпоинт (VLLM_BASE_URL) поверх NVFP4-сборки Qwen3.5-35B-A3B. Основной рантайм —
+  #   Ollama (ревизия решения PM 03.07.2026 вечером); при реанимации обновить тег образа
+  #   по официальному рецепту vLLM для DGX Spark и развести EXTRACTION_MODEL/served-model-name.
+  # Образ: vllm/vllm-openai:v0.18.0-cu130 — тег, под который прогнан рецепт
+  #   квантизации модели (см. VLLM_MODEL в .env.example); multi-arch, содержит
+  #   linux/arm64 (проверено на Docker Hub — arch=arm64 в манифесте тега).
+  # Веса модели скачиваются HF-кэшем при первом старте в volume vllm_hf_cache
+  #   (см. «Быстрый старт» в README — команда предзагрузки и её размер).
+  # Уровень: ✅ реализовано (A-01)
+  vllm:
+    image: vllm/vllm-openai:v0.18.0-cu130
+    container_name: ariadna_vllm
+    # Запарковано решением PM 03.07.2026 (образ не стартует на GB10, cuda capability
+    # 12.1 > 12.0 образа): не стартует по умолчанию, только `--profile vllm`; веса
+    # NVFP4 (~21.8 ГБ) остаются в volume vllm_hf_cache. Основной рантайм — Ollama.
+    profiles: ["vllm"]
+    restart: unless-stopped
+    ports:
+      - "${VLLM_PORT:-8000}:8000"
+    ipc: host   # vLLM требует расширенный /dev/shm для тензорных буферов
+    environment:
+      HUGGING_FACE_HUB_TOKEN: "${HUGGING_FACE_HUB_TOKEN:-}"
+    volumes:
+      - vllm_hf_cache:/root/.cache/huggingface
+    command:
+      - "--model=${VLLM_MODEL:-ig1/Qwen3.5-35B-A3B-NVFP4}"
+      - "--served-model-name=${EXTRACTION_MODEL:-Qwen3.5-35B-A3B-NVFP4}"
+      - "--gpu-memory-utilization=${VLLM_GPU_MEM_UTIL:-0.85}"
+      - "--max-model-len=${VLLM_MAX_MODEL_LEN:-131072}"
+      - "--max-num-seqs=${VLLM_MAX_NUM_SEQS:-4}"
+      # KV-cache остаётся в исходном dtype: Qwen3.5 — гибрид с Gated DeltaNet
+      # (Mamba-подобные слои), FP8 KV-cache на нём деградирует качество (заметка
+      # в карточке NVFP4-сборки) — --kv-cache-dtype НЕ выставляем.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      # /health — штатный эндпоинт vLLM OpenAI-сервера; curl нет в образе, используем python.
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 20   # первая загрузка весов NVFP4 (~десятки ГБ) может занимать минуты
+      start_period: 120s
+
+  # ─── ollama ─────────────────────────────────────────────────────
+  # Назначение: ОСНОВНОЙ рантайм проекта (ревизия решения PM 03.07.2026 вечером) —
+  #   извлечение (qwen3.5:35b-a3b, официальный int4; откат qwen3.5:9b) и
+  #   эмбеддинги (qwen3-embedding:0.6b). Модели НЕ встроены в образ — pull в README.
+  # Образ: ollama/ollama:0.31.1 — multi-arch (linux/amd64, linux/arm64); архитектура
+  #   Qwen3.5 (Gated Delta Networks) требует Ollama ≥ 0.17.4 — 0.31.1 существенно новее.
+  # Уровень: ✅ реализовано (A-01)
+  ollama:
+    image: ollama/ollama:0.31.1
+    container_name: ariadna_ollama
+    restart: unless-stopped
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      # `ollama list` дергает локальный демон API — падает, если сервер не готов.
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 15s
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_import:
+  neo4j_plugins:
+  vllm_hf_cache:
+  ollama_data:
