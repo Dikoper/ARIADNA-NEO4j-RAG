@@ -43,3 +43,34 @@ forceAtlas2Based c avoidOverlap. Тексты «2–7 мин» → «до 8 ми
 A-19). Тесты: +18 (68 ui), полный прогон 635 passed + 3 xfail; смоук 4 пресетов из кэша.
 **Решения:** гео-пояснения citations/gap обновлены после A-22 (документы размечены,
 у цитат/ячеек гео-поля нет — честно). **Открыто:** нет.
+
+## 2026-07-04 · module-dev (Sonnet) · A-15
+**Сделано:** `ui/recommendations_view.py` (новый) — `group_recommendations` (порядок
+similar_case→expert→adjacent_topic, пустые группы опущены), `render_recommendations`
+(иконки 📄/👤/🧭, reason курсивом, цитаты в `st.expander` через `citations_view.
+format_citation`), мягкая подпись `NO_RECOMMENDATIONS_NOTE` при пустом списке.
+`ui/backend.py`: `get_recommendations(question, answer, *, driver=None, top_k=3)` →
+`_cached_recommendations` (`@st.cache_data`, ключ — `answer_cache.normalize_question`;
+`_driver`/`_answer` — `contracts.Answer` без frozen нехэшируем, драйвер тоже — оба
+исключены из хэша префиксом `_`); driver не передан — открывает/закрывает свой
+(как `get_subgraph`), передан явно — не закрывает (владелец вызывающая сторона);
+ImportError/исключение аналитики/стенда → `[]` + лог UI-004 (новый код в ERRORS.md).
+Рекомендации считаются на лету НЕ пишутся в `answer_cache.json` (решение
+оркестратора). `ui/app.py`: панель «Рекомендации» — подзаголовок после блока
+подграфа в `_render_answer`, спиннер `RECOMMENDATIONS_WAIT_NOTICE` («до 10 секунд»);
+кнопка «Скачать отчёт» теперь берёт `answer.model_copy(update={"recommendations":
+...})`, чтобы в MD попали свежие рекомендации, даже если сам Answer — из кэша без
+них. `ui/export_md.py`: секция «Рекомендации» (те же группы/порядок/иконки, что на
+экране, через переиспользуемые `KIND_ORDER`/`KIND_TITLES_RU`/`KIND_ICONS`/
+`group_recommendations` из recommendations_view), опускается при пустом списке.
+**Решения:** интерфейс `build_recommendations(driver, question, answer, *, top_k=3)`
+мокался только через `sys.modules` в СВОИХ тестах — реальный `analytics.
+recommendations` не импортирован (пишется параллельно, A-14). Отдельный тест
+`test_get_recommendations_unhashable_driver_does_not_break_cache` защищает от
+регресса «забыли подчёркивание у `_driver`» (driver с `__hash__ = None`).
+**Проблемы:** нет. **Открыто:** нет — все пункты задачи закрыты.
+**Прогоны:** `tests/ui/` — 85/85 (было 68, +17); `lint_precomments.py` — ок;
+`pytest tests/ -q` единым вызовом → **663 passed, 3 xfailed, 4 failed** — 4 падения
+все в `tests/analytics/test_recommendations.py` (чужой модуль A-14, параллельный
+агент): `AttributeError: 'NoneType' object has no attribute 'log'` в `log_event`
+при `logger=None` — НЕ трогал по инструкции задачи, фиксирую для оркестратора.

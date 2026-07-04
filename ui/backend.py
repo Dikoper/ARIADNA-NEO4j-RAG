@@ -1,22 +1,31 @@
-"""Обвязка вызовов бэкенда для Streamlit-демо (A-13): чат, подграф, карта пробелов.
+"""Обвязка вызовов бэкенда для Streamlit-демо (A-13): чат, подграф, карта
+пробелов, рекомендации (У-1, A-15).
 
-Вход: вопрос пользователя / список ID узлов / ничего (карта пробелов). Выход:
-`contracts.Answer` (через кэш или живой синтез), словарь подграфа
-(`graph.templates.fetch_subgraph`) или `contracts.GapReport`
-(`analytics.gap_map.build_gap_report`).
+Вход: вопрос пользователя / список ID узлов / готовый Answer / ничего (карта
+пробелов). Выход: `contracts.Answer` (через кэш или живой синтез), словарь
+подграфа (`graph.templates.fetch_subgraph`), `contracts.GapReport`
+(`analytics.gap_map.build_gap_report`) или `list[contracts.Recommendation]`
+(`analytics.recommendations.build_recommendations`).
 
 Зависимости: `ariadna.search.answer.answer_question`, `ariadna.graph.templates.
-fetch_subgraph`, `ariadna.analytics.gap_map.build_gap_report` — ВСЕ ленивым
-импортом (пишутся параллельно/ещё не существуют на момент A-13, см. постановку
-задачи): ImportError/любая ошибка стенда (Neo4j/Ollama недоступны) — честная
-деградация, UI не падает целиком (app.py показывает заглушку).
+fetch_subgraph`, `ariadna.analytics.gap_map.build_gap_report`,
+`ariadna.analytics.recommendations.build_recommendations` — ВСЕ ленивым
+импортом (пишутся параллельно/ещё не существуют на момент A-13/A-15, см.
+постановку задачи): ImportError/любая ошибка стенда (Neo4j/Ollama недоступны) —
+честная деградация, UI не падает целиком (app.py показывает заглушку).
 Инвариант: никакой бизнес-логики (Cypher/аналитика) здесь не пишется — только
 вызов готовых функций search/analytics/graph и разбор их результата.
+Рекомендации считаются на лету поверх готового Answer и НЕ пишутся в кэш
+ответов `answer_cache` (решение оркестратора, A-15) — только кэшируются в
+памяти Streamlit на время сессии (`@st.cache_data`) по нормализованному
+вопросу, чтобы не пересчитывать при каждом rerun скрипта.
 Паспорт: docs/dev/modules/ui.md.
 """
 from __future__ import annotations
 
-from ariadna.contracts import Answer, GapReport
+import streamlit as st
+
+from ariadna.contracts import Answer, GapReport, Recommendation
 from ariadna.logutil import get_logger, log_event, new_run_id
 from ui import answer_cache
 
@@ -133,3 +142,79 @@ def get_gap_report(*, limit: int = 50) -> GapReport | None:
         log_event(logger, stage="gap_report", event="UI-002", level="ERROR",
                    detail=f"build_gap_report упал: {str(exc)[:300]} — заглушка «раздел готовится»")
         return None
+
+
+# ─── _cached_recommendations ────────────────────────────────────────────
+# Назначение: кэш-слой над `build_recommendations` (A-14, параллельный
+#   агент) — ключ кэша: только `normalized_question` + `top_k` (нормализация —
+#   `answer_cache.normalize_question`, тот же приём, что у кэша ответов).
+#   `_driver`/`_answer` начинаются с подчёркивания — Streamlit НЕ хэширует
+#   такие параметры (обязательно: `contracts.Answer` без frozen=True
+#   нехэшируем — pydantic сам определяет `__eq__` без `__hash__`; сырой
+#   neo4j.Driver тоже не гарантированно хэшируем). Если `_driver` не передан —
+#   открывает и закрывает свой (как `get_subgraph`), чтобы вызывающая сторона
+#   (app.py) не обязана была сама управлять подключением; переданный явно
+#   driver (тесты/переиспользование) НЕ закрывается — им владеет вызывающий.
+#   Недоступность модуля/стенда — пустой список, а не исключение наружу.
+# Входные связи: normalized_question, _answer (Answer), _driver, top_k
+# Выходные данные: list[contracts.Recommendation]
+# Уровень: ✅ реализовано (A-15)
+@st.cache_data(show_spinner=False)
+def _cached_recommendations(
+    normalized_question: str,
+    _answer: Answer,
+    *,
+    _driver=None,
+    top_k: int = 3,
+) -> list[Recommendation]:
+    logger = get_logger("ui", new_run_id("ui_"))
+    try:
+        from ariadna.analytics.recommendations import build_recommendations
+    except ImportError as exc:
+        log_event(logger, stage="recommendations", event="UI-004", level="WARNING",
+                   detail=f"build_recommendations недоступен ({str(exc)[:200]}) — пустой список")
+        return []
+
+    driver = _driver
+    owns_driver = driver is None
+    if owns_driver:
+        try:
+            from ariadna.graph.lexical_loader import get_driver
+            driver = get_driver()
+        except Exception as exc:  # noqa: BLE001 — стенд недоступен, честный фолбэк
+            log_event(logger, stage="recommendations", event="UI-004", level="WARNING",
+                       detail=f"Neo4j недоступен ({str(exc)[:200]}) — пустой список")
+            return []
+
+    try:
+        return build_recommendations(driver, normalized_question, _answer, top_k=top_k)
+    except Exception as exc:  # noqa: BLE001 — любая ошибка стенда/аналитики не должна ронять UI
+        log_event(logger, stage="recommendations", event="UI-004", level="ERROR",
+                   detail=f"build_recommendations упал: {str(exc)[:300]} — пустой список")
+        return []
+    finally:
+        if owns_driver:
+            driver.close()
+
+
+# ─── get_recommendations ─────────────────────────────────────────────────
+# Назначение: рекомендации (У-1) поверх готового ответа — публичная обёртка
+#   над `_cached_recommendations`: нормализует вопрос для ключа кэша, driver
+#   передаёт под подчёркиванием (не участвует в хэше). НЕ пишет в кэш ответов
+#   `answer_cache.json` (решение оркестратора) — только in-memory кэш Streamlit
+#   на время сессии демо.
+# Входные связи: question (для ключа кэша), answer — уже полученный Answer,
+#   driver — свой Neo4j-driver вызывающей стороны (опционально; None — функция
+#   откроет и закроет свой)
+# Выходные данные: list[contracts.Recommendation] — до top_k каждого вида
+# Уровень: ✅ реализовано (A-15)
+def get_recommendations(
+    question: str,
+    answer: Answer,
+    *,
+    driver=None,
+    top_k: int = 3,
+) -> list[Recommendation]:
+    return _cached_recommendations(
+        answer_cache.normalize_question(question), answer, _driver=driver, top_k=top_k
+    )

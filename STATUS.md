@@ -31,8 +31,8 @@ worklog для них — worklogs/_orchestrator.md.
 | M-04 | — | **ВЕХА: 4 эталонных запроса отвечают** (~15 ч) | ✅ | виза PM 04.07 | — |
 | A-12 | analytics | Карта пробелов ⭐: gap-матрица (Cypher NOT EXISTS) → GapReport + темы only_ru/only_foreign | ✅ | module-dev+tester+fixer (Sonnet), reviewer APPROVE, волна 5 | worklogs/analytics.md |
 | A-13 | ui | Streamlit: чат + подграф ответа (contradicts красным, У-3) + карта пробелов + фильтры гео/год | ✅ | module-dev+tester+fixer×2 (Sonnet), reviewer APPROVE, волна 5 | worklogs/ui.md |
-| A-14 | analytics | Блок «Рекомендации» (У-1): похожие кейсы (векторная близость), эксперты (обход графа), смежные темы → Recommendation | 📋 | — | — |
-| A-15 | ui | Блок «Рекомендации» в UI (панель рядом с ответом) | 📋 | — | — |
+| A-14 | analytics | Блок «Рекомендации» (У-1): похожие кейсы (векторная близость), эксперты (обход графа), смежные темы → Recommendation | ✅ | module-dev (Sonnet), волна 6, reviewer APPROVE | worklogs/analytics.md |
+| A-15 | ui | Блок «Рекомендации» в UI (панель рядом с ответом) | ✅ | module-dev (Sonnet), волна 6, reviewer APPROVE | worklogs/ui.md |
 | M-05 | — | **ВЕХА: демо кликабельно** (~18 ч) | ✅ | виза PM 04.07 | — |
 | A-16 | analytics | Литобзор: ReviewSection (консенсус/разногласия) + таблица сравнения технологий (У-2) + экспорт MD/JSON-LD | 📋 | — | — |
 | A-17 | scripts | diagnose.py: по коду ошибки/doc_id собирает пакет для ремонтного агента (лог-трасса + паспорт + реестр) | 📋 | — | — |

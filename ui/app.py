@@ -1,14 +1,16 @@
 """Streamlit-демо «Ариадны» (A-13): вкладка «Чат» (вопрос -> Answer с цитатами,
-подграф ответа, contradicts красным — У-3) + вкладка «Карта пробелов ⭐».
+подграф ответа, contradicts красным — У-3, панель «Рекомендации» — У-1, A-15)
++ вкладка «Карта пробелов ⭐».
 
 Вход: вопрос пользователя (текст/пресет) + сайдбар-фильтры (гео/год; A-23 —
 типы объектов, порог уверенности связей, размер подграфа). Экспорт ответа и
-карты пробелов в Markdown — кнопки скачивания (A-23, ui.export_md). Выход:
-экраны Streamlit; никакой бизнес-логики здесь не пишется — только вызовы
-`ui.backend` (обёртка над `search.answer_question`/`graph.templates.
-fetch_subgraph`/`analytics.gap_map.build_gap_report`, все с ленивым импортом
-и честной деградацией) и чистых хелперов `ui.answer_cache`/`ui.subgraph_view`/
-`ui.citations_view`/`ui.gap_view`.
+карты пробелов в Markdown — кнопки скачивания (A-23, ui.export_md; с A-15 —
+включает свежие рекомендации). Выход: экраны Streamlit; никакой бизнес-логики
+здесь не пишется — только вызовы `ui.backend` (обёртка над `search.
+answer_question`/`graph.templates.fetch_subgraph`/`analytics.gap_map.
+build_gap_report`/`analytics.recommendations.build_recommendations`, все с
+ленивым импортом и честной деградацией) и чистых хелперов `ui.answer_cache`/
+`ui.subgraph_view`/`ui.citations_view`/`ui.gap_view`/`ui.recommendations_view`.
 
 Запуск: `.venv/bin/python -m streamlit run ui/app.py` из корня репозитория
 (нужен корень в sys.path для `from ui import ...` — обеспечивает `-m`).
@@ -27,6 +29,7 @@ from ui import backend
 from ui.citations_view import GEOGRAPHY_FILTER_UNAVAILABLE_NOTE, filter_citations_by_year, format_citation
 from ui.export_md import answer_to_markdown, gap_report_to_markdown
 from ui.gap_view import GAP_MATRIX_GEOGRAPHY_NOTE, build_gap_rows, select_geography_topics
+from ui.recommendations_view import render_recommendations
 from ui.subgraph_view import ENTITY_TYPE_LABELS_RU, build_agraph_elements, format_flat_node_list, legend_items
 
 st.set_page_config(page_title="Ариадна — карта знаний R&D", layout="wide")
@@ -38,6 +41,11 @@ SYNTHESIS_WAIT_NOTICE = (
     "это честная оценка живого прогона (не зависание). Пожалуйста, дождитесь "
     "завершения."
 )
+
+# Подбор рекомендаций (У-1, A-15) — отдельный от синтеза ответа шаг, честная
+# верхняя оценка ожидания (контракт A-14: build_recommendations < 5 с, запас
+# на холодный старт подключения к стенду).
+RECOMMENDATIONS_WAIT_NOTICE = "Подбор рекомендаций может занять до 10 секунд."
 
 
 # Назначение: кэш-обёртки над ui.backend для тяжёлых вызовов (карта пробелов —
@@ -180,8 +188,10 @@ def _render_contradictions(contradictions: list[Contradiction]) -> None:
 
 # Назначение: рендер уже полученного Answer (из кэша или свежего синтеза) —
 #   текст, честное «не найдено», цитаты (с фильтром по году), противоречия,
-#   подграф с фильтрами A-23, кнопка экспорта отчёта в Markdown (A-23).
-# Уровень: ✅ реализовано (A-13, экспорт и фильтры — A-23)
+#   подграф с фильтрами A-23, панель «Рекомендации» (У-1, A-15), кнопка
+#   экспорта отчёта в Markdown (A-23; с A-15 — включает свежие рекомендации,
+#   даже если сам Answer пришёл из кэша ответов без них).
+# Уровень: ✅ реализовано (A-13, экспорт и фильтры — A-23, рекомендации — A-15)
 def _render_answer(answer: Answer, *, from_cache: bool, filters: dict) -> None:
     if from_cache:
         st.info("Ответ показан из кэша демо.")
@@ -211,15 +221,22 @@ def _render_answer(answer: Answer, *, from_cache: bool, filters: dict) -> None:
             if cit in visible_citations:
                 st.markdown(f"[{i}] {format_citation(cit)}")
 
+    with st.spinner(RECOMMENDATIONS_WAIT_NOTICE):
+        recommendations = backend.get_recommendations(answer.question, answer)
+    export_answer = answer.model_copy(update={"recommendations": recommendations})
+
     st.download_button(
         "Скачать отчёт (.md)",
-        data=answer_to_markdown(answer, generated_at=datetime.now().strftime("%d.%m.%Y %H:%M")),
+        data=answer_to_markdown(export_answer, generated_at=datetime.now().strftime("%d.%m.%Y %H:%M")),
         file_name="ariadna_answer.md",
         mime="text/markdown",
     )
 
     _render_contradictions(answer.contradictions)
     _render_subgraph(answer.subgraph_node_ids, filters)
+
+    st.subheader("Рекомендации")
+    render_recommendations(recommendations)
 
 
 # Назначение: вкладка «Чат» — пресеты 4 эталонных вопросов жюри + свободный

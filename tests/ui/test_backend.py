@@ -1,6 +1,10 @@
 """Тесты обвязки ui.backend (A-13): кэш-first ответ, честная деградация
 get_subgraph/get_gap_report при недоступности fetch_subgraph/build_gap_report
-(ленивый импорт, ещё не приземлились/стенд недоступен)."""
+(ленивый импорт, ещё не приземлились/стенд недоступен); get_recommendations
+(У-1, A-15) — деградация при недоступности analytics.recommendations (модуль
+пишется параллельно, A-14 — в СВОИХ тестах build_recommendations НЕ
+импортируется, только мокается через sys.modules, как и остальные ленивые
+импорты этого файла), кэш по нормализованному вопросу, driver нехэшируем."""
 from __future__ import annotations
 
 import sys
@@ -8,7 +12,7 @@ import types
 
 import pytest
 
-from ariadna.contracts import Answer, GapReport
+from ariadna.contracts import Answer, GapReport, Recommendation, RecommendationKind
 from ui import backend
 
 
@@ -141,4 +145,138 @@ def test_preset_questions_match_jury_count():
     assert len(backend.PRESET_QUESTIONS) == 4
     for label, question in backend.PRESET_QUESTIONS:
         assert label
-        assert len(question) > 20
+
+
+# ─── A-15: get_recommendations ────────────────────────────────────────────
+# Каждый тест использует свой уникальный текст вопроса — `_cached_recommendations`
+# кэширует по нормализованному вопросу на весь процесс pytest (st.cache_data,
+# см. docstring backend.py), общий текст между тестами дал бы ложный кэш-хит.
+
+def _sample_answer(question: str) -> Answer:
+    return Answer(question=question, text="ответ", found=True)
+
+
+class _FakeDriver:
+    def __init__(self):
+        self.closed = False
+
+    def close(self):
+        self.closed = True
+
+
+def test_get_recommendations_import_error_degrades_to_empty_list(monkeypatch):
+    monkeypatch.setitem(sys.modules, "ariadna.analytics.recommendations", None)
+    answer = _sample_answer("Вопрос про рекомендации — импорт недоступен")
+    assert backend.get_recommendations(answer.question, answer) == []
+
+
+def test_get_recommendations_success_opens_and_closes_own_driver(monkeypatch):
+    expected = [Recommendation(kind=RecommendationKind.SIMILAR_CASE, title="Похожий кейс")]
+    fake_driver = _FakeDriver()
+    calls = []
+
+    def fake_build_recommendations(driver, question, answer, *, top_k=3):
+        calls.append((driver, question, answer, top_k))
+        return expected
+
+    monkeypatch.setitem(
+        sys.modules, "ariadna.analytics.recommendations",
+        _fake_module("ariadna.analytics.recommendations", build_recommendations=fake_build_recommendations),
+    )
+    monkeypatch.setitem(
+        sys.modules, "ariadna.graph.lexical_loader",
+        _fake_module("ariadna.graph.lexical_loader", get_driver=lambda: fake_driver),
+    )
+
+    answer = _sample_answer("Вопрос про рекомендации — успешный путь")
+    result = backend.get_recommendations(answer.question, answer)
+    assert result == expected
+    assert calls and calls[0][0] is fake_driver
+    assert fake_driver.closed is True
+
+
+def test_get_recommendations_build_exception_degrades_to_empty_list(monkeypatch):
+    def broken_build_recommendations(driver, question, answer, *, top_k=3):
+        raise RuntimeError("аналитика упала")
+
+    monkeypatch.setitem(
+        sys.modules, "ariadna.analytics.recommendations",
+        _fake_module("ariadna.analytics.recommendations", build_recommendations=broken_build_recommendations),
+    )
+    monkeypatch.setitem(
+        sys.modules, "ariadna.graph.lexical_loader",
+        _fake_module("ariadna.graph.lexical_loader", get_driver=lambda: _FakeDriver()),
+    )
+    answer = _sample_answer("Вопрос про рекомендации — исключение аналитики")
+    assert backend.get_recommendations(answer.question, answer) == []
+
+
+def test_get_recommendations_driver_connection_error_returns_empty_list(monkeypatch):
+    def broken_get_driver():
+        raise RuntimeError("Neo4j недоступен")
+
+    monkeypatch.setitem(
+        sys.modules, "ariadna.analytics.recommendations",
+        _fake_module("ariadna.analytics.recommendations", build_recommendations=lambda *a, **k: []),
+    )
+    monkeypatch.setitem(
+        sys.modules, "ariadna.graph.lexical_loader",
+        _fake_module("ariadna.graph.lexical_loader", get_driver=broken_get_driver),
+    )
+    answer = _sample_answer("Вопрос про рекомендации — стенд недоступен")
+    assert backend.get_recommendations(answer.question, answer) == []
+
+
+def test_get_recommendations_explicit_driver_is_not_closed_by_backend(monkeypatch):
+    fake_driver = _FakeDriver()
+
+    monkeypatch.setitem(
+        sys.modules, "ariadna.analytics.recommendations",
+        _fake_module("ariadna.analytics.recommendations", build_recommendations=lambda *a, **k: []),
+    )
+    # graph.lexical_loader намеренно НЕ подложен: явный driver означает, что
+    # backend не должен даже пытаться открыть свой (иначе тест упал бы с ImportError).
+    answer = _sample_answer("Вопрос про рекомендации — явный driver вызывающей стороны")
+    backend.get_recommendations(answer.question, answer, driver=fake_driver)
+    assert fake_driver.closed is False
+
+
+def test_get_recommendations_unhashable_driver_does_not_break_cache(monkeypatch):
+    class _UnhashableDriver:
+        __hash__ = None
+
+    monkeypatch.setitem(
+        sys.modules, "ariadna.analytics.recommendations",
+        _fake_module("ariadna.analytics.recommendations", build_recommendations=lambda *a, **k: []),
+    )
+    answer = _sample_answer("Вопрос про рекомендации — нехэшируемый driver")
+    # driver без подчёркивания в контракте streamlit — обязателен __hash__; если
+    # бы backend забыл префикс `_driver`, st.cache_data упал бы здесь с ошибкой.
+    result = backend.get_recommendations(answer.question, answer, driver=_UnhashableDriver())
+    assert result == []
+
+
+def test_get_recommendations_uses_normalized_question_as_cache_key(monkeypatch):
+    calls = []
+
+    def fake_build_recommendations(driver, question, answer, *, top_k=3):
+        calls.append(question)
+        return []
+
+    monkeypatch.setitem(
+        sys.modules, "ariadna.analytics.recommendations",
+        _fake_module("ariadna.analytics.recommendations", build_recommendations=fake_build_recommendations),
+    )
+    fake_driver = _FakeDriver()
+    monkeypatch.setitem(
+        sys.modules, "ariadna.graph.lexical_loader",
+        _fake_module("ariadna.graph.lexical_loader", get_driver=lambda: fake_driver),
+    )
+
+    answer = _sample_answer("Вопрос про рекомендации — нормализация ключа кэша уникальный")
+    variant = "  ВОПРОС ПРО рекомендации — нормализация ключа кэша уникальный?  "
+
+    backend.get_recommendations(answer.question, answer)
+    backend.get_recommendations(variant, answer)
+
+    assert len(calls) == 1  # второй вызов — кэш-хит по нормализованному вопросу

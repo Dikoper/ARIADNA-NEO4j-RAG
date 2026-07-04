@@ -1,9 +1,11 @@
 """Тесты экспорта в Markdown (A-23): ответ чата и карта пробелов —
 структура отчёта, честная пометка «не найдено», пустые секции опускаются,
-формат цитат совпадает с экранным (format_citation)."""
+формат цитат совпадает с экранным (format_citation); секция «Рекомендации»
+(У-1, A-15) — те же группы/порядок/иконки, что на экране, опускается при
+пустом списке."""
 from __future__ import annotations
 
-from ariadna.contracts import Answer, Citation, Contradiction, GapCell, GapReport
+from ariadna.contracts import Answer, Citation, Contradiction, GapCell, GapReport, Recommendation, RecommendationKind
 from ui.citations_view import format_citation
 from ui.export_md import answer_to_markdown, gap_report_to_markdown
 
@@ -54,6 +56,33 @@ def test_answer_markdown_empty_sections_omitted():
     md = answer_to_markdown(_sample_answer(citations=[], contradictions=[]))
     assert "## Источники" not in md
     assert "## Противоречия" not in md
+
+
+def test_answer_markdown_recommendations_section_omitted_when_empty():
+    md = answer_to_markdown(_sample_answer(recommendations=[]))
+    assert "## Рекомендации" not in md
+
+
+def test_answer_markdown_recommendations_section_grouped_and_ordered():
+    recommendations = [
+        Recommendation(
+            kind=RecommendationKind.ADJACENT_TOPIC, title="Электродиализ", reason="смежная тема вопроса",
+        ),
+        Recommendation(
+            kind=RecommendationKind.SIMILAR_CASE, title="Похожий эксперимент", reason="близкая постановка",
+            citations=[Citation(doc_id="d4", chunk_id="d4#1", title="Отчёт", year=2022, quote="аналогичный режим")],
+        ),
+    ]
+    md = answer_to_markdown(_sample_answer(recommendations=recommendations))
+    assert "## Рекомендации" in md
+    assert "### Похожие кейсы" in md
+    assert "### Смежные темы" in md
+    # Порядок групп в тексте: «Похожие кейсы» перед «Смежные темы», даже если
+    # вход пришёл в обратном порядке (similar_case -> ... -> adjacent_topic).
+    assert md.index("### Похожие кейсы") < md.index("### Смежные темы")
+    assert "📄 **Похожий эксперимент** — близкая постановка" in md
+    assert "🧭 **Электродиализ** — смежная тема вопроса" in md
+    assert format_citation(recommendations[1].citations[0]) in md
 
 
 def test_answer_markdown_no_date_when_not_passed():
