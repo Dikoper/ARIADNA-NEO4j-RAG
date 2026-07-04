@@ -180,7 +180,15 @@ LIMIT $limit
 # таких чанков; n_sources=0 -> пара вообще не встречается вместе — «полный»
 # пробел). ВАЖНО: material_terms/process_terms ОБЯЗАНЫ быть непустыми — иначе
 # декартово произведение Material x Process (~26 млн пар) — см. templates.py:
-# execute_intent().
+# execute_intent(). material_n_mentions/process_n_mentions (A-12, дефект №1
+# tester-отчёта) — ДОБАВЛЕНЫ в RETURN поверх исходных полей, порядок и состав
+# остальных полей НЕ менялся: analytics.gap_map использует их как тай-брейк
+# по значимости (сумма n_mentions DESC вместо алфавита — иначе редкий по
+# алфавиту материал типа "(NH4)2SO4" выталкивает частые пары из топа среди
+# ~42.2k пар с n_sources=0, см. worklogs/analytics.md); graph.templates.
+# execute_intent()/search читают только row["node_ids"]/row["chunk_ids"]
+# (единый межшаблонный контракт, см. docstring templates.py) — новые поля
+# роутеру не мешают.
 _Q_GAP_MATRIX = """
 MATCH (m:Material), (p:Process)
 WHERE p.is_tech_solution = true
@@ -192,7 +200,9 @@ WITH m, p, count(DISTINCT c) AS n_sources, collect(DISTINCT c.chunk_id) AS chunk
 RETURN m.id AS material_id, m.name AS material_name, p.id AS process_id, p.name AS process_name,
        n_sources,
        [x IN chunk_ids_raw WHERE x IS NOT NULL] AS chunk_ids,
-       [m.id, p.id] AS node_ids
+       [m.id, p.id] AS node_ids,
+       coalesce(m.n_mentions, 0) AS material_n_mentions,
+       coalesce(p.n_mentions, 0) AS process_n_mentions
 ORDER BY n_sources DESC, material_name, process_name
 LIMIT $limit
 """
@@ -232,3 +242,69 @@ TEMPLATE_DEFAULT_CANONICALS: dict[str, dict[str, list[str]]] = {
         "material": ["шахтные воды"],
     },
 }
+
+# ─── gap_cell_context (A-12) ───────────────────────────────────────────────
+# Назначение: batched-запрос текстового условия для ячеек карты пробелов —
+# по набору chunk_id (со-упоминания пары Material x Process из gap_matrix)
+# возвращает краткое NumericConstraint (param+op+norm_value+norm_unit) и имена
+# Property-сущностей, со-упоминаемых в том же чанке — analytics.gap_map строит
+# GapCell.condition. ОДИН запрос на весь отчёт (не по ячейке) — иначе N мелких
+# запросов на живом графе.
+GAP_CELL_CONTEXT_QUERY = """
+UNWIND $chunk_ids AS cid
+MATCH (c:Chunk {chunk_id: cid})
+OPTIONAL MATCH (c)-[:HAS_CONSTRAINT]->(nc:NumericConstraint)
+OPTIONAL MATCH (c)<-[:MENTIONED_IN]-(prop:Property)
+WITH c.chunk_id AS chunk_id,
+     collect(DISTINCT CASE WHEN nc IS NOT NULL
+             THEN nc.param + ' ' + nc.op + ' ' + toString(nc.norm_value) + ' ' + nc.norm_unit END) AS constraint_texts_raw,
+     collect(DISTINCT prop.name) AS property_names_raw
+RETURN chunk_id,
+       [x IN constraint_texts_raw WHERE x IS NOT NULL] AS constraint_texts,
+       [x IN property_names_raw WHERE x IS NOT NULL] AS property_names
+"""
+
+# ─── geography_themes (A-12) ────────────────────────────────────────────────
+# Назначение: срез Material/Process-тем с достаточным n_mentions ($min_mentions)
+# и множеством geography документов, где тема упоминается (doc_geographies) —
+# analytics.gap_map относит тему к only_ru/only_foreign, если множество состоит
+# РОВНО из одного значения ('ru' либо 'foreign'; 'unknown'/смешанное — тема не
+# попадает ни в один список). Единичный label-скан Material|Process без
+# term-фильтра — НЕ декартово произведение (в отличие от gap_matrix), безопасно
+# исполнять без обязательных слотов.
+GEOGRAPHY_THEMES_QUERY = """
+MATCH (n)
+WHERE (n:Material OR n:Process) AND n.n_mentions >= $min_mentions
+OPTIONAL MATCH (n)-[:MENTIONED_IN]->(c:Chunk)
+OPTIONAL MATCH (doc:Document)-[:HAS_CHUNK]->(c)
+WITH n, collect(DISTINCT doc.geography) AS doc_geo_raw
+RETURN n.id AS node_id, n.name AS name,
+       [l IN labels(n) WHERE l <> 'Entity'][0] AS entity_type,
+       [x IN doc_geo_raw WHERE x IS NOT NULL] AS doc_geographies
+ORDER BY n.n_mentions DESC
+LIMIT $limit
+"""
+
+# ─── subgraph_nodes / subgraph_edges (A-12, интерфейс для UI) ───────────────
+# Назначение: узлы подграфа ответа по набору Entity.id, урезанные до $max_nodes
+# по n_mentions (UI рисует ограниченный граф, не весь набор node_ids ответа).
+SUBGRAPH_NODES_QUERY = """
+MATCH (n:Entity) WHERE n.id IN $node_ids
+RETURN n.id AS id, n.name AS name,
+       [l IN labels(n) WHERE l <> 'Entity'][0] AS type,
+       coalesce(n.is_tech_solution, false) AS is_tech_solution
+ORDER BY n.n_mentions DESC
+LIMIT $max_nodes
+"""
+
+# Назначение: рёбра ВСЕХ 6 UPPER_SNAKE-типов онтологии между узлами набора
+# $node_ids (вызывающая сторона — graph.templates.fetch_subgraph — передаёт уже
+# урезанный SUBGRAPH_NODES_QUERY набор id, не исходный список ответа) —
+# CONTRADICTS помечается is_contradicts=true (У-3, UI красит красным).
+SUBGRAPH_EDGES_QUERY = """
+MATCH (a:Entity)-[r:USES_MATERIAL|OPERATES_AT_CONDITION|PRODUCES_OUTPUT|DESCRIBED_IN|VALIDATED_BY|CONTRADICTS]->(b:Entity)
+WHERE a.id IN $node_ids AND b.id IN $node_ids
+RETURN a.id AS source, b.id AS target, type(r) AS type,
+       coalesce(r.confidence, 0.5) AS confidence,
+       type(r) = 'CONTRADICTS' AS is_contradicts
+"""

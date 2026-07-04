@@ -5,7 +5,8 @@
 для воспроизведения). Диагностика по коду/doc_id — `scripts/diagnose.py` (задача A-17).
 
 Диапазоны: `INGEST-0xx` конвертация/чанкинг · `EXTRACT-0xx` извлечение ·
-`GRAPH-0xx` загрузка/Cypher · `SEARCH-0xx` роутер/ответы · `UI-0xx` интерфейс ·
+`GRAPH-0xx` загрузка/Cypher · `SEARCH-0xx` роутер/ответы · `ANALYTICS-0xx`
+аналитика (карта пробелов/литобзор/рекомендации) · `UI-0xx` интерфейс ·
 `DEPLOY-0xx` инфраструктура.
 
 | Код | Симптом | Вероятная причина | Где чинить |
@@ -32,4 +33,9 @@
 | SEARCH-006 | Графовый Cypher-шаблон (execute_intent) упал при выполнении | Ошибка в шаблоне A-10/несовместимый QueryIntent.slots, Neo4j недоступен | `search/retrieval` — retrieve() гасит исключение, уходит в чисто векторную ветку (см. SEARCH-001) |
 | SEARCH-007 | Синтез ответа недоступен (таймаут/пустой content дважды, либо ANSWER_BACKEND=anthropic без ключа) | Ollama недоступна оба раза (первая попытка + ретрай упрощённым промптом), либо возврат на Claude API временно заблокирован решением PM | `search/answer` — экстрактивная деградация: found=True, text = первые предложения топ-чанков + реальные citations |
 | SEARCH-008 | `graph.templates.execute_intent` получил неизвестный template_id | Рассинхрон между `search/router` (генерирует template_id) и `graph.templates.TEMPLATES` (реестр шаблонов) — новый template_id в роутере без соответствующего Cypher-шаблона | `graph/templates` — `ValueError` до обращения к Neo4j; чинить реестр `TEMPLATES` или вызывающую сторону |
+| ANALYTICS-001 | `analytics.gap_map.build_gap_report` упал с исключением (gap_matrix/geography_themes) | Neo4j недоступен/сеть/контейнер не поднят при построении карты пробелов | `analytics/gap_map` — исключение НЕ перехватывается и НЕ деградирует (офлайн-отчёт, не путь ответа в реальном времени, в отличие от SEARCH-004/006/007); вызывающая сторона (`ui/backend.get_gap_report`, см. UI-002) сама решает деградацию UI |
+| ANALYTICS-002 | `analytics.gap_map.build_gap_report`/CLI `--limit` получил отрицательный `limit` | Вызывающая сторона (UI/CLI) передала `limit < 0` — Python-срез `rows[:limit]` при отрицательном `limit` тихо режет С КОНЦА (`rows[:-1]` = все строки, кроме последней), а не возвращает пусто/ошибку (дефект №2 tester-отчёта A-12) | `analytics/gap_map` — `ValueError` ДО обращения к Neo4j; `limit=0` — валиден, пустой отчёт (не ошибка) |
 | DEPLOY-001 | Сервис (Neo4j/Ollama) недоступен | Контейнер не поднят / порт занят | `deploy/` — healthcheck в compose; README-инструкция |
+| UI-001 | Подграф ответа не отрисован — показан плоский список ID узлов | `graph.templates.fetch_subgraph` недоступен (ImportError) или Neo4j не отвечает | `ui/backend.get_subgraph` — деградация до `subgraph_view.format_flat_node_list`, UI не падает |
+| UI-002 | Карта пробелов показывает заглушку «раздел готовится» | `analytics.gap_map.build_gap_report` недоступен (ImportError) или Neo4j не отвечает | `ui/backend.get_gap_report` — возвращает None, вкладка «Карта пробелов ⭐» рисует инструкцию запуска |
+| UI-003 | Гео-фильтр сайдбара не влияет на список цитат чата (не логируется — статическое ограничение, не runtime-событие) | `contracts.Citation` не хранит гео-признак источника (только год) — осознанное ограничение контракта, не путь сбоя | `ui/citations_view` — фильтр гео к цитатам не применяется, сайдбар честно поясняет ограничение (см. `GEOGRAPHY_FILTER_UNAVAILABLE_NOTE`) |

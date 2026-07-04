@@ -29,8 +29,8 @@ worklog для них — worklogs/_orchestrator.md.
 | A-10 | search | Роутер запросов: QueryIntent, шаблонные Cypher под 4 эталонных запроса + сравнительный шаблон «RU vs зарубеж» (У-2) | ✅ | module-dev+tester+fixer (Sonnet), reviewer APPROVE, волна 4 | worklogs/search.md |
 | A-11 | search | Гибридный ответ: retrieval граф+вектор → синтез локальным Qwen через Ollama (ANSWER_BACKEND, бюджет на thinking) → Answer с цитатами + пометка contradicts (У-3) | ✅ | module-dev+tester+fixer (Sonnet), reviewer APPROVE, волна 4 | worklogs/search.md |
 | M-04 | — | **ВЕХА: 4 эталонных запроса отвечают** (~15 ч) | 📋 | PM+оркестратор | — |
-| A-12 | analytics | Карта пробелов ⭐: gap-матрица (Cypher NOT EXISTS) → GapReport + темы only_ru/only_foreign | 📋 | — | — |
-| A-13 | ui | Streamlit: чат + подграф ответа (contradicts красным, У-3) + карта пробелов + фильтры гео/год | 📋 | — | — |
+| A-12 | analytics | Карта пробелов ⭐: gap-матрица (Cypher NOT EXISTS) → GapReport + темы only_ru/only_foreign | ✅ | module-dev+tester+fixer (Sonnet), reviewer APPROVE, волна 5 | worklogs/analytics.md |
+| A-13 | ui | Streamlit: чат + подграф ответа (contradicts красным, У-3) + карта пробелов + фильтры гео/год | ✅ | module-dev+tester+fixer×2 (Sonnet), reviewer APPROVE, волна 5 | worklogs/ui.md |
 | A-14 | analytics | Блок «Рекомендации» (У-1): похожие кейсы (векторная близость), эксперты (обход графа), смежные темы → Recommendation | 📋 | — | — |
 | A-15 | ui | Блок «Рекомендации» в UI (панель рядом с ответом) | 📋 | — | — |
 | M-05 | — | **ВЕХА: демо кликабельно** (~18 ч) | 📋 | PM+оркестратор | — |

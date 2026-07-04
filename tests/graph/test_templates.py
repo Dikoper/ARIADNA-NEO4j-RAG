@@ -6,7 +6,9 @@ rows>0, это ПРИЁМОЧНЫЙ критерий паспорта модул
 {rows, node_ids, chunk_ids, contradiction_pairs} и типы полей; инвариант №4
 (только $param, никакой конкатенации/f-string в текстах Cypher-запросов);
 неизвестный template_id -> ValueError (SEARCH-008); guard gap_matrix (оба слота
-пустые -> ValueError, ХОТЯ БЫ один слот -> не падает).
+пустые -> ValueError, ХОТЯ БЫ один слот -> не падает); fetch_subgraph (A-12,
+интерфейсный контракт для UI) — пустой node_ids без обращения к Neo4j, форма
+{"nodes","edges"}, срез до max_nodes, is_contradicts=true на CONTRADICTS.
 
 Тесты используют ту же fixture `driver` (session-scoped, tests/graph/conftest.py),
 что и остальные тесты graph/ — это ЧТЕНИЕ уже наполненного боевого графа
@@ -20,7 +22,7 @@ from pathlib import Path
 
 from ariadna.contracts import QueryIntent
 from ariadna.graph import cypher_templates
-from ariadna.graph.templates import SEARCH_UNKNOWN_TEMPLATE, execute_intent
+from ariadna.graph.templates import SEARCH_UNKNOWN_TEMPLATE, execute_intent, fetch_subgraph
 from ariadna.search.router import route
 
 # ─── 4 эталонных вопроса жюри (TASK.md, дословно) ──────────────────────────
@@ -237,3 +239,72 @@ def test_templates_module_source_passes_static_query_text_not_built_dynamically(
     assert not re.search(r"f\"\"\".*MATCH", source, re.DOTALL)
     assert not re.search(r"query\s*\+=", source)
     assert not re.search(r"query\s*=.*\+", source)
+
+
+# ══════════════════════ fetch_subgraph (A-12, интерфейсный контракт для UI) ══════════════════════
+
+class _FakeDriver:
+    """Фиктивный neo4j.Driver — .session() должен НИКОГДА не вызываться при
+    пустом node_ids (пустой подграф без обращения к Neo4j)."""
+
+    def session(self):
+        raise AssertionError("fetch_subgraph не должен обращаться к Neo4j при пустом node_ids")
+
+
+# Назначение: пустой node_ids -> {"nodes": [], "edges": []} БЕЗ обращения к Neo4j.
+# Уровень: ✅ реализовано (module-tester A-12)
+def test_fetch_subgraph_empty_node_ids_returns_empty_shape_without_driver_call():
+    result = fetch_subgraph(_FakeDriver(), [])
+    assert result == {"nodes": [], "edges": []}
+
+
+# Назначение: форма результата на живом графе — nodes/edges с обязательными
+#   ключами контракта UI ({"id","name","type","is_tech_solution"} / {"source",
+#   "target","type","confidence","is_contradicts"}).
+# Уровень: ✅ реализовано (module-tester A-12)
+def test_fetch_subgraph_live_returns_expected_shape(driver):
+    intent = route(Q4_MINE_WATER)
+    result = execute_intent(driver, intent)
+    sub = fetch_subgraph(driver, result["node_ids"], max_nodes=20)
+
+    assert set(sub.keys()) == {"nodes", "edges"}
+    assert 0 < len(sub["nodes"]) <= 20
+    for node in sub["nodes"]:
+        assert set(node.keys()) == {"id", "name", "type", "is_tech_solution"}
+        assert isinstance(node["is_tech_solution"], bool)
+    for edge in sub["edges"]:
+        assert set(edge.keys()) == {"source", "target", "type", "confidence", "is_contradicts"}
+        assert isinstance(edge["is_contradicts"], bool)
+
+
+# Назначение: max_nodes реально режет количество узлов подграфа (не просто
+#   игнорируется) — запрос №4 жюри даёт node_ids сильно больше 5.
+# Уровень: ✅ реализовано (module-tester A-12)
+def test_fetch_subgraph_live_max_nodes_truncates(driver):
+    intent = route(Q4_MINE_WATER)
+    result = execute_intent(driver, intent)
+    assert len(result["node_ids"]) > 5  # предпосылка теста — есть что резать
+
+    sub = fetch_subgraph(driver, result["node_ids"], max_nodes=5)
+    assert len(sub["nodes"]) == 5
+
+
+# Назначение: CONTRADICTS между узлами набора -> is_contradicts=True (У-3, UI
+#   красит красным) — известная боевая пара (experiment/equipment, worklog A-12).
+# Уровень: ✅ реализовано (module-tester A-12)
+def test_fetch_subgraph_live_marks_contradicts_edge(driver):
+    node_ids = ["experiment:katastroficheskaya-polomka-apteika", "equipment:pech-vzveshennoi-plavki"]
+    sub = fetch_subgraph(driver, node_ids, max_nodes=10)
+
+    assert len(sub["nodes"]) == 2
+    contradicts_edges = [e for e in sub["edges"] if e["is_contradicts"]]
+    assert len(contradicts_edges) == 1
+    assert contradicts_edges[0]["type"] == "CONTRADICTS"
+
+
+# Назначение: node_ids без узлов в базе (несуществующие id) -> подграф пуст,
+#   не падает.
+# Уровень: ✅ реализовано (module-tester A-12)
+def test_fetch_subgraph_live_unknown_node_ids_returns_empty_nodes(driver):
+    sub = fetch_subgraph(driver, ["material:no-such-node-xyz"], max_nodes=10)
+    assert sub == {"nodes": [], "edges": []}
