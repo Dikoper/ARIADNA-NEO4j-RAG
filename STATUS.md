@@ -23,7 +23,7 @@ worklog для них — worklogs/_orchestrator.md.
 | A-06 | graph | OWL-онтология + словарь синонимов RU/EN в ontology/ | ✅ | module-dev+tester (Sonnet), волна 3 | worklogs/graph.md |
 | A-07 | extraction | Правила чисел/единиц: regex-нормализатор → NumericConstraint + тесты на примерах эталонных запросов | ✅ | module-dev+tester (Sonnet), волна 3 | worklogs/extraction.md |
 | A-08 | extraction | LLM-извлечение по онтологии (Ollama/qwen3.5:35b-a3b — осн. рантайм, откат qwen3.5:9b; structured output по схеме ExtractionResult; учесть reasoning-режим — бюджет токенов) | ✅ | module-dev+tester (Sonnet) | worklogs/extraction.md |
-| A-09 | graph | Загрузка сущностного графа: дедуп по синонимам, хабы Experiment/TechSolution, provenance + поля У-4 (source/updated_at/confidence/edited_by) | 📋 | — | — |
+| A-09 | graph | Загрузка сущностного графа: дедуп по синонимам, хабы Experiment/TechSolution, provenance + поля У-4 (source/updated_at/confidence/edited_by) | ✅ | module-dev+tester+fixer (Sonnet), reviewer APPROVE | worklogs/graph.md |
 | M-02 | — | **ВЕХА: граф виден в Neo4j Browser** (~10 ч) | 📋 | PM+оркестратор | — |
 | M-03 | — | **ЧЕК-ПОЙНТ ДЕГРАДАЦИИ (10–12 ч): сквозной путь работает? нет → RAG-first** | 📋 | решение PM | — |
 | A-10 | search | Роутер запросов: QueryIntent, шаблонные Cypher под 4 эталонных запроса + сравнительный шаблон «RU vs зарубеж» (У-2) | 📋 | — | — |

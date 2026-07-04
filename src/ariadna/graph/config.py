@@ -13,6 +13,7 @@ from pathlib import Path
 # ─── Входные пути (по умолчанию) ────────────────────────────────────────
 DEFAULT_META_PATH = Path("data/processed/meta.jsonl")
 DEFAULT_CHUNKS_PATH = Path("data/processed/chunks_embedded.jsonl")
+DEFAULT_EXTRACTED_PATH = Path("data/processed/extracted_haiku.jsonl")  # A-09 entity_loader
 
 # ─── Vector index по Chunk.embedding — имя фиксировано для search/retrieval ──
 CHUNK_VECTOR_INDEX_NAME = "chunk_embedding_idx"
@@ -20,6 +21,9 @@ VECTOR_SIMILARITY_FUNCTION = "cosine"
 
 # ─── Батч UNWIND — компромисс память/round-trips (9580 чанков корпуса) ──
 LOAD_BATCH_SIZE = 500
+
+# ─── Провенанс узлов сущностного графа (A-09) — автоизвлечение Haiku ────
+ENTITY_NODE_DEFAULT_CONFIDENCE = 0.9
 
 # ─── Подключение к Neo4j — .env в корне проекта (CLAUDE.md) ────────────
 ENV_FILE = Path(".env")
