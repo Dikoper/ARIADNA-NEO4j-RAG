@@ -15,8 +15,8 @@ from __future__ import annotations
 from ariadna.contracts import Citation
 
 GEOGRAPHY_FILTER_UNAVAILABLE_NOTE = (
-    "Фильтр по географии для цитат пока не поддерживается — источники не "
-    "размечены по странам."
+    "К цитатам ответа фильтр географии пока не применяется — в цитате не "
+    "хранится страна источника."
 )
 
 
