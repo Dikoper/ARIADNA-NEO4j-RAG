@@ -185,7 +185,8 @@ SLIDES: list[dict] = [
         "title": "Демо",
         "bullets": [
             "Streamlit-чат: вопрос → ответ с цитатами → подграф → карта пробелов",
-            "Видео-демо: [ссылка]",
+            "Видео и материалы: disk.yandex.ru/d/Vo0tJWsdzO_sIg",
+            "Код: github.com/Dikoper/ARIADNA-NEO4j-RAG",
         ],
         "thanks": "Спасибо!",
     },
