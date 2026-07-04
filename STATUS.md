@@ -24,20 +24,20 @@ worklog для них — worklogs/_orchestrator.md.
 | A-07 | extraction | Правила чисел/единиц: regex-нормализатор → NumericConstraint + тесты на примерах эталонных запросов | ✅ | module-dev+tester (Sonnet), волна 3 | worklogs/extraction.md |
 | A-08 | extraction | LLM-извлечение по онтологии (Ollama/qwen3.5:35b-a3b — осн. рантайм, откат qwen3.5:9b; structured output по схеме ExtractionResult; учесть reasoning-режим — бюджет токенов) | ✅ | module-dev+tester (Sonnet) | worklogs/extraction.md |
 | A-09 | graph | Загрузка сущностного графа: дедуп по синонимам, хабы Experiment/TechSolution, provenance + поля У-4 (source/updated_at/confidence/edited_by) | ✅ | module-dev+tester+fixer (Sonnet), reviewer APPROVE | worklogs/graph.md |
-| M-02 | — | **ВЕХА: граф виден в Neo4j Browser** (~10 ч) | 📋 | PM+оркестратор | — |
+| M-02 | — | **ВЕХА: граф виден в Neo4j Browser** (~10 ч) | ✅ | виза PM 04.07 | — |
 | M-03 | — | **ЧЕК-ПОЙНТ ДЕГРАДАЦИИ (10–12 ч): сквозной путь работает? нет → RAG-first** | 📋 | решение PM | — |
 | A-10 | search | Роутер запросов: QueryIntent, шаблонные Cypher под 4 эталонных запроса + сравнительный шаблон «RU vs зарубеж» (У-2) | ✅ | module-dev+tester+fixer (Sonnet), reviewer APPROVE, волна 4 | worklogs/search.md |
 | A-11 | search | Гибридный ответ: retrieval граф+вектор → синтез локальным Qwen через Ollama (ANSWER_BACKEND, бюджет на thinking) → Answer с цитатами + пометка contradicts (У-3) | ✅ | module-dev+tester+fixer (Sonnet), reviewer APPROVE, волна 4 | worklogs/search.md |
-| M-04 | — | **ВЕХА: 4 эталонных запроса отвечают** (~15 ч) | 📋 | PM+оркестратор | — |
+| M-04 | — | **ВЕХА: 4 эталонных запроса отвечают** (~15 ч) | ✅ | виза PM 04.07 | — |
 | A-12 | analytics | Карта пробелов ⭐: gap-матрица (Cypher NOT EXISTS) → GapReport + темы only_ru/only_foreign | ✅ | module-dev+tester+fixer (Sonnet), reviewer APPROVE, волна 5 | worklogs/analytics.md |
 | A-13 | ui | Streamlit: чат + подграф ответа (contradicts красным, У-3) + карта пробелов + фильтры гео/год | ✅ | module-dev+tester+fixer×2 (Sonnet), reviewer APPROVE, волна 5 | worklogs/ui.md |
 | A-14 | analytics | Блок «Рекомендации» (У-1): похожие кейсы (векторная близость), эксперты (обход графа), смежные темы → Recommendation | 📋 | — | — |
 | A-15 | ui | Блок «Рекомендации» в UI (панель рядом с ответом) | 📋 | — | — |
-| M-05 | — | **ВЕХА: демо кликабельно** (~18 ч) | 📋 | PM+оркестратор | — |
+| M-05 | — | **ВЕХА: демо кликабельно** (~18 ч) | ✅ | виза PM 04.07 | — |
 | A-16 | analytics | Литобзор: ReviewSection (консенсус/разногласия) + таблица сравнения технологий (У-2) + экспорт MD/JSON-LD | 📋 | — | — |
 | A-17 | scripts | diagnose.py: по коду ошибки/doc_id собирает пакет для ремонтного агента (лог-трасса + паспорт + реестр) | 📋 | — | — |
 | A-18 | graph | Семантический фасад: экспорт JSON-LD, валидация данных по онтологии | 📋 | — | — |
-| A-19 | docs | Подача: README-финал, видео-демо (вкл. ручную правку в Neo4j Browser, У-4), презентация, деплой | 📋 | — | — |
+| A-19 | docs | Подача: README-финал, видео-демо (вкл. ручную правку в Neo4j Browser, У-4), презентация, деплой | ✅ | оркестратор + 2×module-dev (Sonnet), reviewer APPROVE; видео/ссылки — PM по SUBMISSION.md | worklogs/_orchestrator.md |
 | A-20 | ingest | Каталожный слой: карточки CatalogEntry «директория+годы» по необработанным папкам (Журналы, Конференции) + эмбеддинги + загрузка в Neo4j (label CatalogEntry) | ✅ | module-dev+tester (Sonnet) | worklogs/ingest.md |
 | A-21 | scripts | Обогащение тем жюри Haiku-субагентами: партии 1+2 = 3500 чанков → extracted_haiku.jsonl (65k сущн., 30k св.); хвост ~5.5k низкорелевантных чанков — решение PM | ✅ | оркестратор + Haiku-волны | worklogs/_orchestrator.md |
 | A-22 | ingest | Гео-разметка документов (решение PM 04.07): правила по маркерам RU/зарубеж + Haiku-доразметка неоднозначных → Document.geography → only_ru/only_foreign карты пробелов; + косметика UI width | ✅ | оркестратор + module-dev (Sonnet), reviewer APPROVE | worklogs/ingest.md |

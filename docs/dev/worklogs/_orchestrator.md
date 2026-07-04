@@ -132,3 +132,13 @@ A-12 (REJECT-раунд: приоритизация дефолтного топ-
 в Neo4j → gap_map: only_ru=44, only_foreign=225 тем. Reviewer APPROVE (валидация 10/10).
 **Решения:** география ОПИСЫВАЕМОГО ОПЫТА, не языка (158/177 док. русскоязычные).
 **Открыто:** 2 док. unknown (методички без гео-привязки) — норма; виза PM на M-02/M-04/M-05.
+
+## 2026-07-04 · оркестратор (Fable) · A-19 пакет сдачи + визы вех
+**Сделано:** визы PM на M-02/M-04/M-05 (✅). A-19 двумя dev (Sonnet) параллельно:
+(1) README-финал («Демо за 3 шага», пайплайн end-to-end, CLI сверены с argparse),
+DEMO-SCRIPT.md (сценарий видео 5–7 мин, Cypher У-4 проверен на живом Neo4j),
+SUBMISSION.md + build_submission_archive.sh (git archive, без data/.venv/logs);
+(2) презентация: build_pptx.py → ariadna.pptx + ariadna.pdf (12 слайдов). Reviewer APPROVE.
+**Решения:** архив в artifacts/ (в .gitignore); расхождение extracted_haiku.jsonl vs
+extracted.jsonl задокументировано в README честно.
+**Открыто:** от PM — remote VCS, облачный диск, запись видео; пересобрать архив после коммита.
