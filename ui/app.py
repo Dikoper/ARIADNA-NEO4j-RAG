@@ -1,16 +1,19 @@
-"""Streamlit-демо «Ариадны» (A-13): вкладка «Чат» (вопрос -> Answer с цитатами,
-подграф ответа, contradicts красным — У-3, панель «Рекомендации» — У-1, A-15)
-+ вкладка «Карта пробелов ⭐».
+"""Streamlit-демо «Ариадны» (A-13, редизайн — A-24): вкладка «Чат» (вопрос ->
+Answer) двумя колонками — слева текст ответа с экспортом в шапке и вкладками
+«Источники» (карточки с «Открыть документ») / «Россия vs зарубеж», справа
+вкладки «Подграф» / «⚠ Противоречия» (У-3) / «👥 Эксперты» / «Рекомендации»
+(У-1); над колонками — чипы «Как система поняла вопрос» (детерминированный
+роутер). Вторая вкладка приложения — «Карта пробелов ⭐» (экспорт в шапке,
+вкладки «Таблица» / «Только в 🇷🇺/🌍»).
 
 Вход: вопрос пользователя (текст/пресет) + сайдбар-фильтры (гео/год; A-23 —
-типы объектов, порог уверенности связей, размер подграфа). Экспорт ответа и
-карты пробелов в Markdown — кнопки скачивания (A-23, ui.export_md; с A-15 —
-включает свежие рекомендации). Выход: экраны Streamlit; никакой бизнес-логики
-здесь не пишется — только вызовы `ui.backend` (обёртка над `search.
-answer_question`/`graph.templates.fetch_subgraph`/`analytics.gap_map.
-build_gap_report`/`analytics.recommendations.build_recommendations`, все с
-ленивым импортом и честной деградацией) и чистых хелперов `ui.answer_cache`/
-`ui.subgraph_view`/`ui.citations_view`/`ui.gap_view`/`ui.recommendations_view`.
+типы объектов, порог уверенности связей, размер подграфа). Выход: экраны
+Streamlit; никакой бизнес-логики здесь не пишется — только вызовы `ui.backend`
+(обёртка над `search.answer_question`/`graph.templates.fetch_subgraph`/
+`analytics.gap_map.build_gap_report`/`analytics.recommendations.
+build_recommendations`, все с ленивым импортом и честной деградацией) и
+хелперов `ui.answer_cache`/`ui.subgraph_view`/`ui.citations_view`/`ui.
+gap_view`/`ui.recommendations_view`/`ui.question_view`/`ui.source_cards`.
 
 Запуск: `.venv/bin/python -m streamlit run ui/app.py` из корня репозитория
 (нужен корень в sys.path для `from ui import ...` — обеспечивает `-m`).
@@ -24,13 +27,26 @@ from datetime import datetime
 import streamlit as st
 from streamlit_agraph import agraph
 
-from ariadna.contracts import Answer, Contradiction, GapReport
+from ariadna.contracts import Answer, Contradiction, GapReport, RecommendationKind
 from ui import backend
 from ui.citations_view import GEOGRAPHY_FILTER_UNAVAILABLE_NOTE, filter_citations_by_year, format_citation
 from ui.export_md import answer_to_markdown, gap_report_to_markdown
 from ui.gap_view import GAP_MATRIX_GEOGRAPHY_NOTE, build_gap_rows, select_geography_topics
-from ui.recommendations_view import render_recommendations
-from ui.subgraph_view import ENTITY_TYPE_LABELS_RU, build_agraph_elements, format_flat_node_list, legend_items
+from ui.question_view import build_question_chips
+from ui.recommendations_view import (
+    dedupe_expert_titles,
+    expert_title_key,
+    render_kind_cards,
+    render_recommendations,
+)
+from ui.source_cards import render_source_cards
+from ui.subgraph_view import (
+    ENTITY_TYPE_LABELS_RU,
+    build_agraph_elements,
+    format_flat_node_list,
+    legend_items,
+    list_experts_and_facilities,
+)
 
 st.set_page_config(page_title="Ариадна — карта знаний R&D", layout="wide")
 
@@ -76,6 +92,16 @@ def _cached_subgraph(node_ids: tuple[str, ...]) -> dict | None:
 
 def _get_subgraph(node_ids: list[str]) -> dict | None:
     return _cached_subgraph(tuple(node_ids))
+
+
+# Назначение: кэш чипов разбора вопроса (ревью A-24) — без кэша route()
+#   выполнялся бы на каждый rerun (клик по любому виджету) и на вопросах вне
+#   шаблонов плодил бы файл лога SEARCH-001 на каждый клик (см. пре-комментарий
+#   ui.question_view.get_intent).
+# Уровень: ✅ реализовано (A-24, ревью)
+@st.cache_data(ttl=3600, show_spinner=False)
+def _cached_question_chips(question: str) -> tuple[list[str], bool]:
+    return build_question_chips(question)
 
 
 # Назначение: сайдбар с фильтрами; возвращает словарь выбранных значений для
@@ -142,10 +168,10 @@ def _render_sidebar() -> dict:
 # Назначение: рендер подграфа ответа (agraph) с фильтрами сайдбара (A-23:
 #   типы объектов, порог уверенности связей, размер схемы) и цветовой
 #   легендой типов; честный фолбэк (плоский список ID узлов), если
-#   fetch_subgraph недоступен/стенд не отвечает.
-# Уровень: ✅ реализовано (A-13, фильтры и легенда — A-23)
+#   fetch_subgraph недоступен/стенд не отвечает. С A-24 живёт во вкладке
+#   «Подграф» правой колонки — свой подзаголовок не рисует (дублировал бы ярлык).
+# Уровень: ✅ реализовано (A-13, фильтры и легенда — A-23, вкладка — A-24)
 def _render_subgraph(subgraph_node_ids: list[str], filters: dict) -> None:
-    st.subheader("Подграф ответа")
     if not subgraph_node_ids:
         st.caption("Для этого ответа подграф пуст.")
         return
@@ -174,10 +200,14 @@ def _render_subgraph(subgraph_node_ids: list[str], filters: dict) -> None:
     agraph(nodes=nodes, edges=edges, config=config)
 
 
-# Назначение: рендер списка противоречий (У-3) — блок «⚠ Противоречия».
-# Уровень: ✅ реализовано (A-13)
+# Назначение: рендер списка противоречий (У-3) — с A-24 живёт во вкладке
+#   «⚠ Противоречия (n)» правой колонки; счётчик в ярлыке вкладки не даёт
+#   спрятать сигнал (инвариант У-3 при табличной раскладке). Пустой список —
+#   честная подпись, а не пустая вкладка.
+# Уровень: ✅ реализовано (A-13, вкладка — A-24)
 def _render_contradictions(contradictions: list[Contradiction]) -> None:
     if not contradictions:
+        st.caption("Противоречий между источниками этого ответа не выявлено.")
         return
     st.warning("⚠ Противоречия в источниках")
     for i, c in enumerate(contradictions, start=1):
@@ -186,12 +216,112 @@ def _render_contradictions(contradictions: list[Contradiction]) -> None:
             st.caption(format_citation(cit))
 
 
+# Назначение: чипы «Как система поняла вопрос» (A-24) — материал/процесс,
+#   числовые условия, география, период, бейдж «Россия vs зарубеж»; источник —
+#   детерминированный роутер (мгновенно, без LLM). Ничего не распознано или
+#   роутер недоступен — блок честно опускается (пустую рамку не рисуем).
+# Уровень: ✅ реализовано (A-24)
+def _render_question_chips(chips: list[str]) -> None:
+    if not chips:
+        return
+    badges = " ".join(f":blue-badge[{chip}]" for chip in chips)
+    st.markdown(f"🧩 **Как система поняла вопрос:** {badges}")
+
+
+# Назначение: вкладки левой колонки (A-24) — «Источники (N)» (карточки с
+#   фильтром года) и «Россия vs зарубеж» (при сравнительном вопросе; таблица —
+#   следующий шаг, пока честная подпись, что сравнение дано в тексте). Вкладка
+#   сравнения рисуется и БЕЗ цитат (ревью A-24: у честного «не найдено» цитат
+#   нет, а чип сравнения обещает вкладку); текст ответа и кнопка экспорта —
+#   выше, в _render_answer (текст не должен ждать подбора рекомендаций).
+# Уровень: ✅ реализовано (A-24, вкладка сравнения без цитат — ревью)
+def _render_answer_left_tabs(answer: Answer, *, compare_mode: bool, filters: dict) -> None:
+    tab_labels = []
+    if answer.citations:
+        visible_citations = filter_citations_by_year(
+            answer.citations, year_from=filters["year_from"], year_to=filters["year_to"]
+        )
+        if len(visible_citations) < len(answer.citations):
+            tab_labels.append(f"Источники ({len(visible_citations)} из {len(answer.citations)})")
+        else:
+            tab_labels.append(f"Источники ({len(answer.citations)})")
+    if compare_mode:
+        tab_labels.append("Россия vs зарубеж")
+    if not tab_labels:
+        return
+
+    tabs = st.tabs(tab_labels)
+    if answer.citations:
+        with tabs[0]:
+            if len(visible_citations) < len(answer.citations):
+                st.caption("Часть источников скрыта фильтром года — номера карточек сохранены.")
+            render_source_cards(answer.citations, visible_citations)
+    if compare_mode:
+        with tabs[-1]:
+            st.caption(
+                "Вопрос распознан как сравнение отечественной и зарубежной практики — "
+                "само сравнение дано в тексте ответа. Отдельная таблица готовится."
+            )
+
+
+# Назначение: правая колонка ответа (A-24) — вкладки «Подграф» (фильтры A-23),
+#   «⚠ Противоречия (n)» (У-3: счётчик всегда в ярлыке), «👥 Эксперты (n)» —
+#   Expert/Facility из полного подграфа ответа ПЛЮС рекомендации вида expert
+#   (правка PM: подграф ответа может не содержать людей, а обход графа
+#   рекомендаций их находит — показываем оба источника, без дублей в
+#   «Рекомендациях»), «Рекомендации» (У-1, A-15) — остальные виды. Дедуп
+#   экспертов сделан выше по потоку (_render_answer — экран и MD-экспорт видят
+#   один список, ревью A-24); люди подграфа, совпадающие по expert_title_key с
+#   рекомендованным экспертом, не дублируются буллетом (ревью A-24) — счётчик
+#   ярлыка честный.
+# Уровень: ✅ реализовано (A-24, эксперты из рекомендаций — правка PM 04.07
+#   ~20:00, дедуп против подграфа — ревью)
+def _render_answer_right(answer: Answer, recommendations, filters: dict) -> None:
+    expert_recs = [r for r in recommendations if r.kind == RecommendationKind.EXPERT]
+    other_recs = [r for r in recommendations if r.kind != RecommendationKind.EXPERT]
+    subgraph = _get_subgraph(answer.subgraph_node_ids) if answer.subgraph_node_ids else None
+    rec_keys = {expert_title_key(r.title) for r in expert_recs}
+    people = [
+        row for row in (list_experts_and_facilities(subgraph) if subgraph else [])
+        # строка вида «👤 Имя» — ключ считается по имени без иконки
+        if expert_title_key(row.split(" ", 1)[1] if " " in row else row) not in rec_keys
+    ]
+
+    tab_graph, tab_contra, tab_people, tab_recs = st.tabs([
+        "Подграф",
+        f"⚠ Противоречия ({len(answer.contradictions)})",
+        f"👥 Эксперты ({len(people) + len(expert_recs)})",
+        "Рекомендации",
+    ])
+    with tab_graph:
+        _render_subgraph(answer.subgraph_node_ids, filters)
+    with tab_contra:
+        _render_contradictions(answer.contradictions)
+    with tab_people:
+        if people:
+            st.caption("Эксперты и организации, связанные с темой ответа:")
+            for row in people:
+                st.markdown(f"- {row}")
+        if expert_recs:
+            if people:
+                st.markdown("**Рекомендованы по смежным работам**")
+            render_kind_cards(RecommendationKind.EXPERT, expert_recs)
+        if not people and not expert_recs:
+            st.caption("Эксперты и организации по теме этого ответа не найдены.")
+    with tab_recs:
+        render_recommendations(other_recs)
+
+
 # Назначение: рендер уже полученного Answer (из кэша или свежего синтеза) —
-#   текст, честное «не найдено», цитаты (с фильтром по году), противоречия,
-#   подграф с фильтрами A-23, панель «Рекомендации» (У-1, A-15), кнопка
-#   экспорта отчёта в Markdown (A-23; с A-15 — включает свежие рекомендации,
-#   даже если сам Answer пришёл из кэша ответов без них).
-# Уровень: ✅ реализовано (A-13, экспорт и фильтры — A-23, рекомендации — A-15)
+#   с A-24 двумя колонками: слева текст с экспортом в шапке и вкладками
+#   источников, справа вкладки подграф/противоречия/эксперты/рекомендации;
+#   над колонками — чипы разбора вопроса и, при противоречиях, всегда видимый
+#   красный баннер У-3 (ревью A-24: сигнал не должен жить только во вкладке).
+#   Текст ответа рисуется ДО подбора рекомендаций (ревью A-24: готовый ответ
+#   не ждёт стенд), кнопка экспорта заполняет плейсхолдер шапки после подбора —
+#   MD-отчёт включает свежие рекомендации (A-15), даже если Answer из кэша.
+# Уровень: ✅ реализовано (A-13, экспорт и фильтры — A-23, рекомендации — A-15,
+#   двухколоночная раскладка и вкладки — A-24, баннер У-3 и порядок — ревью)
 def _render_answer(answer: Answer, *, from_cache: bool, filters: dict) -> None:
     if from_cache:
         st.info("Ответ показан из кэша демо.")
@@ -208,35 +338,38 @@ def _render_answer(answer: Answer, *, from_cache: bool, filters: dict) -> None:
             "пробел в изученных данных — см. вкладку «Карта пробелов ⭐»."
         )
 
-    st.markdown(answer.text)
+    chips, compare_mode = _cached_question_chips(answer.question)
+    _render_question_chips(chips)
 
-    visible_citations = filter_citations_by_year(
-        answer.citations, year_from=filters["year_from"], year_to=filters["year_to"]
-    )
-    if answer.citations:
-        st.subheader("Источники")
-        if len(visible_citations) < len(answer.citations):
-            st.caption(f"Показано {len(visible_citations)} из {len(answer.citations)} — остальные скрыты фильтром года.")
-        for i, cit in enumerate(answer.citations, start=1):
-            if cit in visible_citations:
-                st.markdown(f"[{i}] {format_citation(cit)}")
+    if answer.contradictions:
+        st.warning(
+            f"⚠ В источниках этого ответа найдены противоречащие данные "
+            f"({len(answer.contradictions)}) — подробности во вкладке «⚠ Противоречия» справа."
+        )
 
+    col_left, col_right = st.columns([11, 9], gap="medium")
+    with col_left:
+        export_slot = st.container()
+        st.markdown(answer.text)
+
+    # Подбор рекомендаций — ПОСЛЕ отрисовки текста (готовый ответ виден сразу,
+    # спиннер крутится под колонками) и до экспорта/вкладок, которым нужен
+    # результат. Дедуп экспертов здесь, один раз — экран и MD видят одно и то же.
     with st.spinner(RECOMMENDATIONS_WAIT_NOTICE):
-        recommendations = backend.get_recommendations(answer.question, answer)
+        recommendations = dedupe_expert_titles(backend.get_recommendations(answer.question, answer))
     export_answer = answer.model_copy(update={"recommendations": recommendations})
 
-    st.download_button(
-        "Скачать отчёт (.md)",
-        data=answer_to_markdown(export_answer, generated_at=datetime.now().strftime("%d.%m.%Y %H:%M")),
-        file_name="ariadna_answer.md",
-        mime="text/markdown",
-    )
-
-    _render_contradictions(answer.contradictions)
-    _render_subgraph(answer.subgraph_node_ids, filters)
-
-    st.subheader("Рекомендации")
-    render_recommendations(recommendations)
+    with export_slot:
+        st.download_button(
+            "Скачать отчёт (.md)",
+            data=answer_to_markdown(export_answer, generated_at=datetime.now().strftime("%d.%m.%Y %H:%M")),
+            file_name="ariadna_answer.md",
+            mime="text/markdown",
+        )
+    with col_left:
+        _render_answer_left_tabs(answer, compare_mode=compare_mode, filters=filters)
+    with col_right:
+        _render_answer_right(answer, recommendations, filters)
 
 
 # Назначение: вкладка «Чат» — пресеты 4 эталонных вопросов жюри + свободный
@@ -273,11 +406,36 @@ def _render_chat_tab(filters: dict) -> None:
         )
 
 
-# Назначение: вкладка «Карта пробелов ⭐» — таблица ячеек (пробелы n_sources=0
-#   выделены; чекбокс A-23 «только пробелы») + блоки only_ru/only_foreign по
-#   гео-фильтру сайдбара + кнопка экспорта отчёта в Markdown (A-23). Фолбэк
-#   «раздел готовится», если analytics.gap_map ещё не приземлился/стенд недоступен.
-# Уровень: ✅ реализовано (A-13, экспорт и чекбокс — A-23)
+# Назначение: компактный список тем гео-блока карты пробелов (правка PM
+#   04.07 ~20:10) — счётчик тем + прокручиваемый контейнер фиксированной
+#   высоты (листается сам список, а не вся страница); темы одним markdown-
+#   списком (межстрочные отступы меньше, чем у отдельных абзацев).
+# Уровень: ✅ реализовано (A-24)
+def _render_topic_list(topics: list[str]) -> None:
+    if not topics:
+        st.caption("Пусто.")
+        return
+    st.caption(f"Тем в списке: {len(topics)}")
+    with st.container(height=420, border=True):
+        st.markdown("\n".join(f"- {topic}" for topic in topics))
+
+
+# Короткие ярлыки подвкладок гео-блоков карты пробелов — заголовки блоков
+# select_geography_topics слишком длинные для вкладки.
+_GEO_BLOCK_TAB_LABELS: dict[str, str] = {
+    "Только в отечественной литературе": "🇷🇺 отечественная",
+    "Только в зарубежной литературе": "🌍 зарубежная",
+}
+
+
+# Назначение: вкладка «Карта пробелов ⭐» — с A-24 экспорт и чекбокс «только
+#   пробелы» в шапке (не листать вниз), содержимое двумя вкладками: «Таблица»
+#   (ячейки, пробелы n_sources=0 выделены) и «Только в 🇷🇺 / только в 🌍»
+#   (блоки only_ru/only_foreign по гео-фильтру сайдбара; правка PM — RU и
+#   зарубеж разведены по подвкладкам со счётчиками, списки в прокручиваемых
+#   контейнерах). Фолбэк «раздел готовится», если analytics.gap_map ещё не
+#   приземлился/стенд недоступен.
+# Уровень: ✅ реализовано (A-13, экспорт и чекбокс — A-23, шапка и вкладки — A-24)
 def _render_gap_tab(geography_filter: str) -> None:
     st.subheader("Карта пробелов ⭐")
     st.caption("Комбинации «материал–процесс–условие», для которых в корпусе не нашлось источников.")
@@ -287,41 +445,55 @@ def _render_gap_tab(geography_filter: str) -> None:
         st.info("Раздел готовится — обратитесь к администратору демо.")
         return
 
-    gaps_only = st.checkbox("Показывать только пробелы (0 источников)", value=False)
-    rows = build_gap_rows(report)
-    if gaps_only:
-        rows = [row for row in rows if row["is_gap"]]
-    if not rows:
-        st.caption("По выбранным темам пробелы не найдены — попробуйте увеличить лимит.")
-    else:
-        st.dataframe(
-            rows,
-            column_config={
-                "material": "Материал",
-                "process": "Процесс",
-                "condition": "Условие",
-                "n_sources": "Источников найдено",
-                "is_gap": st.column_config.CheckboxColumn("Пробел (0 источников)"),
-            },
-            width="stretch",
-            hide_index=True,
+    head_export, head_filter = st.columns([1, 2], gap="medium")
+    with head_export:
+        st.download_button(
+            "Скачать карту пробелов (.md)",
+            data=gap_report_to_markdown(report, generated_at=datetime.now().strftime("%d.%m.%Y %H:%M")),
+            file_name="ariadna_gap_report.md",
+            mime="text/markdown",
         )
-    st.caption(GAP_MATRIX_GEOGRAPHY_NOTE)
+    with head_filter:
+        gaps_only = st.checkbox("Показывать только пробелы (0 источников)", value=False)
 
-    for title, topics in select_geography_topics(report, geography_filter).items():
-        st.markdown(f"**{title}**")
-        if topics:
-            for topic in topics:
-                st.markdown(f"- {topic}")
+    tab_table, tab_geo = st.tabs(["Таблица комбинаций", "Только в 🇷🇺 / только в 🌍"])
+
+    with tab_table:
+        rows = build_gap_rows(report)
+        if gaps_only:
+            rows = [row for row in rows if row["is_gap"]]
+        if not rows:
+            st.caption("По выбранным темам пробелы не найдены — попробуйте увеличить лимит.")
         else:
-            st.caption("Пусто.")
+            st.dataframe(
+                rows,
+                column_config={
+                    "material": "Материал",
+                    "process": "Процесс",
+                    "condition": "Условие",
+                    "n_sources": "Источников найдено",
+                    "is_gap": st.column_config.CheckboxColumn("Пробел (0 источников)"),
+                },
+                width="stretch",
+                hide_index=True,
+            )
+        st.caption(GAP_MATRIX_GEOGRAPHY_NOTE)
 
-    st.download_button(
-        "Скачать карту пробелов (.md)",
-        data=gap_report_to_markdown(report, generated_at=datetime.now().strftime("%d.%m.%Y %H:%M")),
-        file_name="ariadna_gap_report.md",
-        mime="text/markdown",
-    )
+    with tab_geo:
+        blocks = select_geography_topics(report, geography_filter)
+        if len(blocks) > 1:
+            labels = [
+                f"{_GEO_BLOCK_TAB_LABELS.get(title, title)} ({len(topics)})"
+                for title, topics in blocks.items()
+            ]
+            for sub_tab, (title, topics) in zip(st.tabs(labels), blocks.items()):
+                with sub_tab:
+                    st.markdown(f"**{title}**")
+                    _render_topic_list(topics)
+        else:
+            for title, topics in blocks.items():
+                st.markdown(f"**{title}**")
+                _render_topic_list(topics)
 
 
 def main() -> None:
