@@ -101,6 +101,23 @@ class Chunk(BaseModel):
     embedding: list[float] | None = Field(default=None, description="Вектор Qwen3-Embedding-0.6B (заполняет search/embeddings)")
 
 
+# ─── CatalogEntry · Уровень: 🔒 ───────────────────────────────────────
+# Назначение: каталожная карточка НЕОБРАБОТАННОЙ части корпуса (Журналы,
+#   Материалы конференций): метаданные только из имён файлов/директорий,
+#   агрегация до директории. В ответ с цитатами НЕ попадает (инвариант №6) —
+#   только в панель рекомендаций как «неиндексированный источник по теме».
+class CatalogEntry(BaseModel):
+    catalog_id: str = Field(description="Стабильный ID карточки (хеш относительного пути директории)")
+    path: str = Field(description="Путь директории относительно data/")
+    title: str = Field(description="Человекочитаемое название: журнал/конференция + уточнение")
+    kind: str = Field(default="other", description="Вид: journal | conference | market_analytics | other")
+    year_from: int | None = Field(default=None, description="Минимальный год из имён файлов (если извлечён)")
+    year_to: int | None = Field(default=None, description="Максимальный год из имён файлов")
+    n_files: int = Field(default=0, description="Сколько файлов лежит в директории (рекурсивно)")
+    description: str = Field(default="", description="Описательная строка для эмбеддинга (RU)")
+    embedding: list[float] | None = Field(default=None, description="Вектор qwen3-embedding описательной строки")
+
+
 # ══════════════════════════ Extraction ══════════════════════════
 
 # ─── NumericConstraint · Уровень: 🔒 ──────────────────────────────────
