@@ -171,7 +171,7 @@ def _render_chat_tab(year_from: int | None, year_to: int | None) -> None:
     st.caption("Готовые запросы жюри:")
     preset_cols = st.columns(len(backend.PRESET_QUESTIONS))
     for col, (label, question_text) in zip(preset_cols, backend.PRESET_QUESTIONS):
-        if col.button(label, use_container_width=True):
+        if col.button(label, width="stretch"):
             st.session_state["question_input"] = question_text
 
     question = st.text_area(
@@ -223,7 +223,7 @@ def _render_gap_tab(geography_filter: str) -> None:
                 "n_sources": "Источников найдено",
                 "is_gap": st.column_config.CheckboxColumn("Пробел (0 источников)"),
             },
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
     st.caption(GAP_MATRIX_GEOGRAPHY_NOTE)

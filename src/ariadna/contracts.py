@@ -53,6 +53,7 @@ class Lang(str, Enum):
 class Geography(str, Enum):
     RU = "ru"                # отечественная практика
     FOREIGN = "foreign"      # зарубежная практика
+    GLOBAL = "global"        # обе практики в одном источнике (обзорные документы)
     UNKNOWN = "unknown"
 
 

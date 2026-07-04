@@ -40,6 +40,7 @@ worklog для них — worklogs/_orchestrator.md.
 | A-19 | docs | Подача: README-финал, видео-демо (вкл. ручную правку в Neo4j Browser, У-4), презентация, деплой | 📋 | — | — |
 | A-20 | ingest | Каталожный слой: карточки CatalogEntry «директория+годы» по необработанным папкам (Журналы, Конференции) + эмбеддинги + загрузка в Neo4j (label CatalogEntry) | ✅ | module-dev+tester (Sonnet) | worklogs/ingest.md |
 | A-21 | scripts | Обогащение тем жюри Haiku-субагентами: партии 1+2 = 3500 чанков → extracted_haiku.jsonl (65k сущн., 30k св.); хвост ~5.5k низкорелевантных чанков — решение PM | ✅ | оркестратор + Haiku-волны | worklogs/_orchestrator.md |
+| A-22 | ingest | Гео-разметка документов (решение PM 04.07): правила по маркерам RU/зарубеж + Haiku-доразметка неоднозначных → Document.geography → only_ru/only_foreign карты пробелов; + косметика UI width | ✅ | оркестратор + module-dev (Sonnet), reviewer APPROVE | worklogs/ingest.md |
 | M-06 | — | **ВЕХА: пакет сдачи готов** (дедлайн 04.07 23:59) | 📋 | PM+оркестратор | — |
 
 ## Отложено (💤 Could — только при запасе времени)

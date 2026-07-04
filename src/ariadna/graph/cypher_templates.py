@@ -285,6 +285,18 @@ ORDER BY n.n_mentions DESC
 LIMIT $limit
 """
 
+# ─── doc_geography_update (A-22) ────────────────────────────────────────────
+# Назначение: точечное обновление Document.geography по результату правилового
+# (или последующего LLM) классификатора geo_classify.py — MATCH по doc_id (узел
+# уже создан graph.lexical_loader.load_documents), не MERGE (документ, которого
+# нет в графе, — строка тихо не даёт результата, не создаёт сироту). updated_at/
+# edited_by — provenance-поля У-4, тот же принцип, что graph_entity_writer.
+DOC_GEOGRAPHY_UPDATE_QUERY = """
+UNWIND $rows AS row
+MATCH (d:Document {doc_id: row.doc_id})
+SET d.geography = row.geography, d.updated_at = row.updated_at, d.edited_by = row.edited_by
+"""
+
 # ─── subgraph_nodes / subgraph_edges (A-12, интерфейс для UI) ───────────────
 # Назначение: узлы подграфа ответа по набору Entity.id, урезанные до $max_nodes
 # по n_mentions (UI рисует ограниченный граф, не весь набор node_ids ответа).

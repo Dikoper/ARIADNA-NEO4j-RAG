@@ -163,6 +163,27 @@ def test_build_geography_themes_classifies_ru_foreign_mixed_and_unknown():
     assert only_foreign == ["тема-foreign"]
 
 
+# Назначение: A-22 — geos == {"global"} (тема встречается ТОЛЬКО в документах
+#   с обеими практиками в одном источнике, contracts.Geography.GLOBAL) -> ни в
+#   один из списков «только…» (не строго "ru", не строго "foreign"); смешанное
+#   ru+global (или foreign+global) — та же логика, множество не равно {"ru"}/
+#   {"foreign"} -> исключено. Строгое равенство сета doc_geographies уже
+#   реализует это корректно (_build_geography_themes не менялся под A-22,
+#   только тест — проверка постановки задачи A-22, worklogs/ingest.md).
+# Уровень: ✅ реализовано (module-tester A-22)
+def test_build_geography_themes_excludes_global_only_and_mixed_with_global():
+    rows = [
+        {"node_id": "m1", "name": "тема-глобальная", "entity_type": "Material", "doc_geographies": ["global"]},
+        {"node_id": "m2", "name": "тема-ru-и-глобальная", "entity_type": "Process", "doc_geographies": ["ru", "global"]},
+        {"node_id": "m3", "name": "тема-foreign-и-глобальная", "entity_type": "Material", "doc_geographies": ["foreign", "global"]},
+        {"node_id": "m4", "name": "тема-чистая-ru", "entity_type": "Process", "doc_geographies": ["ru"]},
+    ]
+    driver = _FakeDriver({gap_map.GEOGRAPHY_THEMES_QUERY: rows})
+    only_ru, only_foreign = gap_map._build_geography_themes(driver)
+    assert only_ru == ["тема-чистая-ru"]
+    assert only_foreign == []
+
+
 # ══════════════════════ _build_cells ══════════════════════
 
 _GAP_ROWS = [
@@ -431,14 +452,16 @@ def test_live_cold_climate_heap_leaching_nickel_ore_case_found_at_default_limit(
     )
 
 
-# Назначение: only_ru/only_foreign — списки строк; на текущих боевых данных ОБА
-#   пусты — Document.geography=unknown у ВСЕХ 177 документов корпуса (геокод
-#   документов нигде не реализован — известное наблюдение A-09/A-10, worklogs/
-#   graph.md и worklogs/search.md, не баг analytics/A-12): тест фиксирует
-#   ФАКТИЧЕСКОЕ поведение на реальных данных, не выдуманное ожидание.
-# Уровень: ✅ реализовано (module-tester A-12)
+# Назначение: only_ru/only_foreign — списки строк, НЕПУСТЫЕ на текущих боевых
+#   данных с момента A-22 (ingest.geo_classify + graph.doc_geography_loader
+#   разметили Document.geography правилами: 56 ru/55 foreign/49 global/17
+#   unknown из 177 — до A-22 все 177 были "unknown" и оба списка были пусты,
+#   это фиксировалось предыдущей версией теста; поведение изменилось МЕТОДОМ
+#   этой задачи, не багом analytics, см. worklogs/ingest.md#A-22).
+# Уровень: ✅ реализовано (module-tester A-12; обновлено A-22)
 @pytest.mark.skipif(not NEO4J_LIVE, reason="нужен живой стенд Neo4j (NEO4J_LIVE)")
 def test_live_only_ru_only_foreign_are_string_lists(report):
     assert isinstance(report.only_ru, list) and all(isinstance(x, str) for x in report.only_ru)
     assert isinstance(report.only_foreign, list) and all(isinstance(x, str) for x in report.only_foreign)
-    assert report.only_ru == [] and report.only_foreign == []  # geography=unknown повсеместно, см. выше
+    assert len(report.only_ru) > 0
+    assert len(report.only_foreign) > 0
